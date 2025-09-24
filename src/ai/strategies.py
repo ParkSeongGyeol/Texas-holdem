@@ -1,18 +1,17 @@
 from abc import ABC, abstractmethod
 from typing import List, Tuple
-from src.core.card import Card
-from src.core.player import Player
-from .base_ai import Action ,AIPlayer
+
+from base_ai import Action ,AIPlayer
 
 class Strategy(ABC):
     @abstractmethod
     def decide(
         self,
         ai: AIPlayer,
-        community_cards: List[Card],
+        community_cards: List[str],
         pot: int,
         current_bet: int,
-        opponents: List[Player],
+        opponents: List,
     ) -> Tuple[Action, int] : pass
 
 class TightStrategy(Strategy): 

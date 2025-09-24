@@ -10,8 +10,6 @@ AI 기본 인터페이스 및 의사결정 시스템
 from abc import ABC, abstractmethod
 from typing import List, Tuple
 from enum import Enum
-from src.core.card import Card
-from src.core.player import Player
 
 class Action(Enum): #플레이어 액션
     FOLD = "fold"
@@ -20,33 +18,32 @@ class Action(Enum): #플레이어 액션
     RAISE = "raise"
     ALL_IN = "all_in"
 
-class AIPlayer(Player, ABC): #AI 인터페이스
-
+class AIPlayer(ABC): #AI 인터페이스
     def __init__(self, name: str, chips: int = 1000, difficulty_level: int = 1, strategy = None):
-        super().__init__(name, chips)
         self.difficulty_level = difficulty_level
         self.strategy = strategy
+        self.hole_cards: List[str] = []
         self.opponent_patterns = {}  # 상대 패턴 분석 데이터
 
     @abstractmethod #(액션, 금액) 
     def make_decision( 
         self,
-        community_cards: List[Card],
+        community_cards: List[str],
         pot: int,
         current_bet: int,
-        opponents: List[Player] 
+        opponents: List 
     ) -> Tuple[Action, int]:  
         pass
 
     @abstractmethod  #강도 0.0~1.0
     def analyze_hand_strength(
         self,
-        hole_cards: List[Card],
-        community_cards: List[Card]
+        hole_cards: List[str],
+        community_cards: List[str]
     ) -> float:
         pass
 
-    def update_opponent_pattern(self, opponent: Player, action: Action, amount: int) -> None:    
+    def update_opponent_pattern(self, opponent , action: Action, amount: int) -> None:    
         if opponent.name not in self.opponent_patterns:
             self.opponent_patterns[opponent.name] = []
 
