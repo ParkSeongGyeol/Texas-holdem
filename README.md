@@ -134,16 +134,37 @@
 ```
 03_poker_game/
 ├── src/
-│   ├── index.js          # 메인 실행 파일
-│   ├── card.js           # Card 클래스
-│   ├── deck.js           # Deck 클래스
-│   ├── player.js         # Player 클래스
-│   └── game.js           # PokerGame 클래스
-├── test/
-│   └── test.js           # 기본 테스트
-├── package.json          # Node.js 설정
-├── README.md            # 프로젝트 문서
-└── poker-presentation.html  # 프로젝트 발표 자료
+│   ├── __init__.py
+│   ├── main.py              # 메인 실행 파일
+│   ├── core/                # 핵심 게임 로직
+│   │   ├── __init__.py
+│   │   ├── card.py          # Card/Deck 클래스 (문현준)
+│   │   ├── player.py        # Player 클래스 (박성결)
+│   │   └── game.py          # PokerGame 클래스 (박성결)
+│   ├── ai/                  # AI 모듈
+│   │   ├── __init__.py
+│   │   ├── base_ai.py       # AI 인터페이스 (박종호)
+│   │   ├── tight_ai.py      # Level 1 AI (박종호)
+│   │   ├── loose_ai.py      # Level 2 AI (박종호)
+│   │   └── adaptive_ai.py   # Level 3 AI (박종호)
+│   ├── algorithms/          # 핵심 알고리즘
+│   │   ├── __init__.py
+│   │   ├── hand_evaluator.py # 족보 판정 (문현준)
+│   │   ├── monte_carlo.py    # 몬테카를로 (박우현)
+│   │   └── minimax.py        # 미니맥스 (박우현)
+│   └── web/                 # 웹 인터페이스
+│       ├── __init__.py
+│       ├── server.py         # FastAPI 서버 (박우현)
+│       └── websocket.py      # WebSocket (박우현)
+├── tests/                   # 테스트 모듈
+│   ├── __init__.py
+│   ├── test_core.py
+│   ├── test_ai.py
+│   └── test_algorithms.py
+├── requirements.txt         # Python 의존성
+├── setup.py                # 패키지 설정
+├── README.md               # 프로젝트 문서
+└── poker-presentation.html # 프로젝트 발표 자료
 ```
 
 ## 🎯 기대 효과
@@ -171,14 +192,26 @@
 git clone https://github.com/ParkSeongGyeol/Texas-holdem.git
 cd Texas-holdem
 
-# 의존성 설치 (추후 구현)
-npm install
+# 가상환경 생성 및 활성화
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# venv\Scripts\activate   # Windows
 
-# 게임 실행 (추후 구현)
-npm start
+# 의존성 설치
+pip install -r requirements.txt
 
-# 테스트 실행 (추후 구현)
-npm test
+# 개발 모드로 패키지 설치
+pip install -e .
+
+# 게임 실행
+python src/main.py
+
+# 테스트 실행
+pytest tests/
+
+# 코드 스타일 검사
+black src/
+flake8 src/
 ```
 
 ## 🤝 협업 방식
