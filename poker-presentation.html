@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>텍사스 홀덤 포커 - 알고리즘 프로젝트</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #333;
+        overflow-x: hidden;
+      }
+
+      .slide {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        position: relative;
+      }
+
+      .slide-content {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 3rem;
+        max-width: 1200px;
+        width: 100%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: slideIn 0.6s ease-out;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      h1 {
+        color: #764ba2;
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        text-align: center;
+        position: relative;
+      }
+
+      h2 {
+        color: #667eea;
+        font-size: 1.8rem;
+        margin: 2rem 0 1rem;
+        border-bottom: 3px solid #667eea;
+        padding-bottom: 0.5rem;
+      }
+
+      h3 {
+        color: #764ba2;
+        font-size: 1.3rem;
+        margin: 1.5rem 0 0.8rem;
+      }
+
+      .team-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 2fr);
+        gap: 1.5rem;
+        margin: 2rem 0;
+      }
+
+      .member-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        transform: translateY(0);
+        transition: transform 0.3s ease;
+      }
+
+      .member-card:hover {
+        transform: translateY(-5px);
+      }
+
+      .member-card h3 {
+        color: white;
+        margin-bottom: 1rem;
+        font-size: 1.2rem;
+      }
+
+      .member-card ul {
+        list-style: none;
+      }
+
+      .member-card li {
+        padding: 0.3rem 0;
+        padding-left: 1.5rem;
+        position: relative;
+        font-size: 0.95rem;
+      }
+
+      .member-card li:before {
+        content: "▸";
+        position: absolute;
+        left: 0;
+      }
+
+      .timeline {
+        position: relative;
+        padding: 2rem 0;
+      }
+
+      .timeline-item {
+        display: flex;
+        margin-bottom: 2rem;
+        position: relative;
+      }
+
+      .timeline-week {
+        background: #667eea;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 10px;
+        min-width: 100px;
+        text-align: center;
+        font-weight: bold;
+      }
+
+      .timeline-content {
+        flex: 1;
+        margin-left: 2rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 10px;
+        border-left: 4px solid #667eea;
+      }
+
+      .algorithm-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+        margin: 2rem 0;
+      }
+
+      .algorithm-card {
+        background: white;
+        border: 2px solid #667eea;
+        border-radius: 10px;
+        padding: 1.5rem;
+        text-align: center;
+        transition: all 0.3s ease;
+      }
+
+      .algorithm-card:hover {
+        background: #667eea;
+        color: white;
+        transform: scale(1.05);
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin: 2rem 0;
+      }
+
+      .stat-card {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        text-align: center;
+      }
+
+      .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        display: block;
+        margin-bottom: 0.5rem;
+      }
+
+      .code-example {
+        background: #2d2d2d;
+        color: #f8f8f2;
+        padding: 1.5rem;
+        border-radius: 10px;
+        font-family: "Courier New", monospace;
+        overflow-x: auto;
+        margin: 1rem 0;
+      }
+
+      .highlight {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 0.2rem 0.5rem;
+        border-radius: 5px;
+        font-weight: bold;
+      }
+
+      .progress-bar {
+        background: #e0e0e0;
+        height: 30px;
+        border-radius: 15px;
+        overflow: hidden;
+        margin: 1rem 0;
+      }
+
+      .progress-fill {
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        height: 100%;
+        display: flex;
+        align-items: center;
+        padding: 0 1rem;
+        color: white;
+        font-weight: bold;
+        animation: progressAnimation 2s ease-out;
+      }
+
+      @keyframes progressAnimation {
+        from {
+          width: 0;
+        }
+      }
+
+      .feature-list {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin: 2rem 0;
+      }
+
+      .feature-item {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 10px;
+        border-left: 5px solid #667eea;
+        transition: transform 0.3s ease;
+      }
+
+      .feature-item:hover {
+        transform: translateX(10px);
+      }
+
+      .nav-buttons {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        display: flex;
+        gap: 1rem;
+        z-index: 1000;
+      }
+
+      .nav-btn {
+        background: white;
+        color: #667eea;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 10px;
+        font-size: 1rem;
+        cursor: pointer;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+      }
+
+      .nav-btn:hover {
+        background: #667eea;
+        color: white;
+        transform: translateY(-3px);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1.5rem 0;
+      }
+
+      th {
+        background: #667eea;
+        color: white;
+        padding: 0.8rem;
+        text-align: left;
+      }
+
+      td {
+        padding: 0.8rem;
+        border-bottom: 1px solid #e0e0e0;
+      }
+
+      tr:hover {
+        background: #f8f9fa;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Slide 1: Title -->
+    <div class="slide" id="slide1">
+      <div class="slide-content">
+        <h1>🎰 텍사스 홀덤 포커 게임</h1>
+        <p
+          style="
+            text-align: center;
+            font-size: 1.3rem;
+            color: #666;
+            margin: 1rem 0;
+          "
+        >
+          알고리즘을 활용한 AI 대전 시스템 구현
+        </p>
+        <div style="text-align: center; margin: 2rem 0">
+          <p style="font-size: 1.1rem">팀원: 문현준, 박성결, 박종호, 박우현</p>
+          <p style="color: #999; margin-top: 0.5rem">
+            2025년 2학기 알고리즘 프로젝트
+          </p>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-number">10주</span>
+            <span>남은 개발 주차</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-number">4명</span>
+            <span>팀원</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-number">3단계</span>
+            <span>AI 난이도</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-number">6개</span>
+            <span>핵심 알고리즘</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 2: Project Goals -->
+    <div class="slide" id="slide2">
+      <div class="slide-content">
+        <h1>📎 프로젝트 목표</h1>
+
+        <h2>학습 목표</h2>
+        <div class="feature-list">
+          <div class="feature-item">
+            <strong>알고리즘 실전 적용</strong>
+            <p>수업에서 배운 이론을 실제 프로젝트에 적용</p>
+          </div>
+          <div class="feature-item">
+            <strong>문제 해결 능력</strong>
+            <p>복잡한 게임 로직을 알고리즘으로 해결</p>
+          </div>
+          <div class="feature-item">
+            <strong>AI 프로그래밍</strong>
+            <p>다양한 난이도의 인공지능 구현</p>
+          </div>
+          <div class="feature-item">
+            <strong>협업 경험</strong>
+            <p>팀 프로젝트를 통한 실무 협업 능력 향상</p>
+          </div>
+        </div>
+
+        <h2>개발 일정</h2>
+        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 10px">
+          <p><strong>📅 전반부:</strong> 3~7주차 (5주간)</p>
+          <p><strong>📅 후반부:</strong> 9~14주차 (6주간)</p>
+          <p><strong>⏰ 주당 작업:</strong> 팀 미팅 1시간 + 개인 작업</p>
+        </div>
+
+        <h2>기술 스택</h2>
+        <div
+          style="
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin: 2rem 0;
+          "
+        >
+          <span class="highlight">Python 3.9+</span>
+          <span class="highlight">FastAPI</span>
+          <span class="highlight">WebSocket</span>
+          <span class="highlight">NumPy</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 3: Core Algorithms -->
+    <div class="slide" id="slide3">
+      <div class="slide-content">
+        <h1>🧮 핵심 알고리즘</h1>
+
+        <div class="algorithm-grid">
+          <div class="algorithm-card">
+            <h3>조합론</h3>
+            <p>7장 중 5장 선택</p>
+            <p><strong>C(7,5) = 21</strong></p>
+            <p>족보 계산 최적화</p>
+          </div>
+          <div class="algorithm-card">
+            <h3>비트마스킹</h3>
+            <p>O(1) 족보 판정</p>
+            <p>메모리 효율성</p>
+            <p>빠른 비교 연산</p>
+          </div>
+          <div class="algorithm-card">
+            <h3>몬테카를로</h3>
+            <p>승률 시뮬레이션</p>
+            <p>1000회 반복</p>
+            <p>병렬 처리</p>
+          </div>
+          <div class="algorithm-card">
+            <h3>미니맥스</h3>
+            <p>게임 트리 탐색</p>
+            <p>α-β 가지치기</p>
+            <p>최적 결정</p>
+          </div>
+          <div class="algorithm-card">
+            <h3>동적 계획법</h3>
+            <p>베팅 전략</p>
+            <p>기댓값 계산</p>
+            <p>메모이제이션</p>
+          </div>
+          <div class="algorithm-card">
+            <h3>Fisher-Yates</h3>
+            <p>카드 셔플</p>
+            <p>O(n) 복잡도</p>
+            <p>완전 무작위</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 4: Individual Roles -->
+    <div class="slide" id="slide4">
+      <div class="slide-content">
+        <h1>👥 개인별 역할 분담</h1>
+
+        <div class="team-grid">
+          <div class="member-card">
+            <h3>문현준 - 카드 시스템 & 족보 판정</h3>
+            <ul>
+              <li>Card/Deck 클래스 설계 및 구현</li>
+              <li>Fisher-Yates 셔플 알고리즘</li>
+              <li>족보 판정 알고리즘 (비트마스킹)</li>
+              <li>카드 강도 비교 함수</li>
+              <li>족보 확률 계산기</li>
+              <li>성능 최적화 및 테스트</li>
+            </ul>
+          </div>
+          <div class="member-card">
+            <h3>박성결 - 게임 진행 로직</h3>
+            <ul>
+              <li>게임 상태 관리 (FSM)</li>
+              <li>턴 진행 시스템</li>
+              <li>베팅 라운드 구현</li>
+              <li>팟 분배 알고리즘</li>
+              <li>승자 판정 로직</li>
+              <li>콘솔 UI 및 토너먼트 모드</li>
+            </ul>
+          </div>
+          <div class="member-card">
+            <h3>박종호 - AI 전략 & 의사결정</h3>
+            <ul>
+              <li>AI 인터페이스 설계</li>
+              <li>확률 기반 의사결정</li>
+              <li>블러핑 모델링</li>
+              <li>상대 패턴 분석</li>
+              <li>난이도별 AI 구현 (3단계)</li>
+              <li>AI 성능 분석 및 밸런싱</li>
+            </ul>
+          </div>
+          <div class="member-card">
+            <h3>박우현 - 고급 AI & 시스템 통합</h3>
+            <ul>
+              <li>몬테카를로 시뮬레이션</li>
+              <li>미니맥스 알고리즘</li>
+              <li>기댓값 계산 시스템</li>
+              <li>네트워크 통신 구현</li>
+              <li>시스템 통합 및 최적화</li>
+              <li>배포 및 Docker 설정</li>
+            </ul>
+          </div>
+        </div>
+
+        <h2>협업 방식</h2>
+        <div style="background: #f8f9fa; border-radius: 10px; margin-top: 2rem">
+          <p>✅ 주 1회 정기 미팅 (진행상황 공유)</p>
+          <p>✅ GitHub를 통한 코드 관리</p>
+          <p>✅ 코드 리뷰 및 페어 프로그래밍</p>
+          <p>✅ 주차별 마일스톤 체크</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 5: Weekly Plan -->
+    <div class="slide" id="slide5">
+      <div class="slide-content">
+        <h1>📅 주차별 개발 계획</h1>
+
+        <h2>전반부 (3~7주차)</h2>
+        <table>
+          <tr>
+            <th>주차</th>
+            <th>문현준</th>
+            <th>박성결</th>
+            <th>박종호</th>
+            <th>박우현</th>
+          </tr>
+          <tr>
+            <td><strong>3주차</strong></td>
+            <td>Card 클래스 설계</td>
+            <td>게임 규칙 문서화</td>
+            <td>AI 인터페이스 정의</td>
+            <td>확률 계산 공식 연구</td>
+          </tr>
+          <tr>
+            <td><strong>4주차</strong></td>
+            <td>Deck & 셔플 구현</td>
+            <td>Player 클래스 구현</td>
+            <td>핸드 강도 평가</td>
+            <td>팟 오즈 계산</td>
+          </tr>
+          <tr>
+            <td><strong>5주차</strong></td>
+            <td>족보 판정 구현</td>
+            <td>게임 라운드 진행</td>
+            <td>Check/Call/Raise 로직</td>
+            <td>실시간 승률 계산</td>
+          </tr>
+          <tr>
+            <td><strong>6주차</strong></td>
+            <td>족보 우선순위 처리</td>
+            <td>베팅 액션 처리</td>
+            <td>타이트 AI 구현</td>
+            <td>몬테카를로 기초</td>
+          </tr>
+          <tr>
+            <td><strong>7주차</strong></td>
+            <td>성능 최적화</td>
+            <td>콘솔 UI 구현</td>
+            <td>루즈 AI 구현</td>
+            <td>몬테카를로 완성</td>
+          </tr>
+        </table>
+
+        <h2>후반부 (9~14주차)</h2>
+        <table>
+          <tr>
+            <th>주차</th>
+            <th>문현준</th>
+            <th>박성렬</th>
+            <th>박종호</th>
+            <th>박우현</th>
+          </tr>
+          <tr>
+            <td><strong>9주차</strong></td>
+            <td>코드 리팩토링</td>
+            <td>멀티게임 지원</td>
+            <td>적응형 AI 설계</td>
+            <td>미니맥스 구현</td>
+          </tr>
+          <tr>
+            <td><strong>10주차</strong></td>
+            <td>통합 테스트</td>
+            <td>토너먼트 모드</td>
+            <td>AI 파라미터 튜닝</td>
+            <td>FastAPI 서버</td>
+          </tr>
+          <tr>
+            <td><strong>11주차</strong></td>
+            <td>비주얼 로그</td>
+            <td>재연결 처리</td>
+            <td>AI 성능 분석</td>
+            <td>WebSocket 구현</td>
+          </tr>
+          <tr>
+            <td><strong>12주차</strong></td>
+            <td>최종 검증</td>
+            <td>사용자 테스트</td>
+            <td>AI 전략 문서화</td>
+            <td>시스템 통합</td>
+          </tr>
+          <tr>
+            <td><strong>13주차</strong></td>
+            <td>발표 자료 준비</td>
+            <td>시연 시나리오</td>
+            <td>AI 대전 시연</td>
+            <td>최종 테스트</td>
+          </tr>
+          <tr>
+            <td><strong>14주차</strong></td>
+            <td colspan="4" style="text-align: center">
+              <strong>최종 발표 및 평가</strong>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Slide 6: Timeline Visualization -->
+    <div class="slide" id="slide6">
+      <div class="slide-content">
+        <h1>🎯 개발 마일스톤</h1>
+
+        <div
+          style="
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+          "
+        >
+          <!-- 왼쪽: 전반부 -->
+          <div>
+            <h2
+              style="
+                text-align: center;
+                font-size: 1.4rem;
+                margin-bottom: 1.5rem;
+              "
+            >
+              전반부 (3~7주차)
+            </h2>
+            <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-week">3~4주차</div>
+                <div class="timeline-content">
+                  <strong>기초 설계 및 구현</strong>
+                  <p>• 카드 시스템 구축</p>
+                  <p>• 게임 규칙 정의</p>
+                  <p>• 기본 클래스 설계</p>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-week">5~6주차</div>
+                <div class="timeline-content">
+                  <strong>핵심 로직 완성</strong>
+                  <p>• 족보 판정 알고리즘</p>
+                  <p>• 베팅 시스템</p>
+                  <p>• 기본 AI (Level 1)</p>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-week">7주차</div>
+                <div class="timeline-content">
+                  <strong>중간 통합</strong>
+                  <p>• 콘솔 플레이 가능</p>
+                  <p>• AI 대전 가능</p>
+                  <p>• 성능 최적화</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 오른쪽: 후반부 -->
+          <div>
+            <h2
+              style="
+                text-align: center;
+                font-size: 1.4rem;
+                margin-bottom: 1.5rem;
+              "
+            >
+              후반부 (9~14주차)
+            </h2>
+            <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-week">9~10주차</div>
+                <div class="timeline-content">
+                  <strong>고급 기능 구현</strong>
+                  <p>• 고급 AI (Level 2, 3)</p>
+                  <p>• 토너먼트 모드</p>
+                  <p>• 네트워크 기초</p>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-week">11~12주차</div>
+                <div class="timeline-content">
+                  <strong>온라인 대전</strong>
+                  <p>• WebSocket 통신</p>
+                  <p>• 실시간 동기화</p>
+                  <p>• 안정화 작업</p>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-week">13~14주차</div>
+                <div class="timeline-content">
+                  <strong>최종 완성</strong>
+                  <p>• 통합 테스트</p>
+                  <p>• 발표 준비</p>
+                  <p>• 프로젝트 완료</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 7: Features -->
+    <div class="slide" id="slide7">
+      <div class="slide-content">
+        <h1>⚡ 구현 기능</h1>
+
+        <h2>필수 기능</h2>
+        <div class="feature-list">
+          <div class="feature-item">
+            <strong>🎯 완전한 포커 게임</strong>
+            <p>프리플롭부터 리버까지 모든 라운드</p>
+          </div>
+          <div class="feature-item">
+            <strong>🤖 3단계 AI 시스템</strong>
+            <p>타이트/루즈/적응형 AI</p>
+          </div>
+          <div class="feature-item">
+            <strong>💰 완벽한 베팅 시스템</strong>
+            <p>Check, Call, Raise, Fold, All-in</p>
+          </div>
+          <div class="feature-item">
+            <strong>👥 2인 온라인 대전</strong>
+            <p>WebSocket 기반 실시간 대전</p>
+          </div>
+        </div>
+
+        <h2>AI 난이도별 특징</h2>
+        <div
+          style="
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 2rem;
+          "
+        >
+          <div style="background: #e8f5e9; padding: 1rem; border-radius: 10px">
+            <strong>Level 1: 타이트 플레이어</strong>
+            <p>• 상위 20% 핸드만 플레이</p>
+            <p>• 보수적 베팅 전략</p>
+            <p>• 블러핑 없음</p>
+            <p>• 예측 가능한 패턴</p>
+          </div>
+          <div style="background: #fff3e0; padding: 1rem; border-radius: 10px">
+            <strong>Level 2: 루즈 어그레시브</strong>
+            <p>• 50% 이상 핸드 참여</p>
+            <p>• 공격적 베팅</p>
+            <p>• 15% 블러핑 확률</p>
+            <p>• 포지션 활용</p>
+          </div>
+          <div style="background: #fce4ec; padding: 1rem; border-radius: 10px">
+            <strong>Level 3: 적응형 AI</strong>
+            <p>• 상대 스타일 분석</p>
+            <p>• 동적 전략 변경</p>
+            <p>• 몬테카를로 시뮬레이션</p>
+            <p>• 미니맥스 의사결정</p>
+          </div>
+        </div>
+
+        <h2>추가 기능</h2>
+        <div
+          style="
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-top: 2rem;
+          "
+        >
+          <p>
+            ⭐ <strong>토너먼트 모드:</strong> 여러 AI가 경쟁하는 라운드 로빈
+            방식
+          </p>
+          <p>⭐ <strong>통계 분석:</strong> 승률, 수익률, 핸드별 성과 분석</p>
+          <p>⭐ <strong>디버그 모드:</strong> 카드 공개, AI 사고 과정 표시</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 8: Expected Outcomes -->
+    <div class="slide" id="slide8">
+      <div class="slide-content">
+        <h1>🎯 기대 효과</h1>
+
+        <h2>알고리즘 학습 성과</h2>
+        <div class="algorithm-grid">
+          <div class="algorithm-card">
+            <h3>자료구조</h3>
+            <p>• 해시테이블</p>
+            <p>• 우선순위 큐</p>
+            <p>• 트리 구조</p>
+            <p>• 비트 배열</p>
+          </div>
+          <div class="algorithm-card">
+            <h3>알고리즘</h3>
+            <p>• 탐색 알고리즘</p>
+            <p>• 정렬 알고리즘</p>
+            <p>• 그래프 탐색</p>
+            <p>• 최적화 기법</p>
+          </div>
+          <div class="algorithm-card">
+            <h3>수학적 사고</h3>
+            <p>• 확률론</p>
+            <p>• 게임이론</p>
+            <p>• 조합론</p>
+            <p>• 기댓값 계산</p>
+          </div>
+        </div>
+
+        <h2>개발 역량 향상</h2>
+        <div class="feature-list">
+          <div class="feature-item">
+            <strong>설계 능력</strong>
+            <p>복잡한 시스템을 모듈화하여 설계하는 능력</p>
+          </div>
+          <div class="feature-item">
+            <strong>최적화 경험</strong>
+            <p>시간/공간 복잡도 분석 및 개선</p>
+          </div>
+          <div class="feature-item">
+            <strong>AI 프로그래밍</strong>
+            <p>다양한 의사결정 알고리즘 구현 경험</p>
+          </div>
+          <div class="feature-item">
+            <strong>협업 능력</strong>
+            <p>Git을 활용한 팀 프로젝트 경험</p>
+          </div>
+        </div>
+
+        <h2>최종 산출물</h2>
+        <div
+          style="
+            background: #f8f9fa;
+            padding: 2rem;
+            border-radius: 10px;
+            margin-top: 2rem;
+          "
+        >
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 2rem;
+              text-align: center;
+            "
+          >
+            <div>
+              <h3 style="color: #667eea">게임 시스템</h3>
+              <p>완벽하게 작동하는<br />텍사스 홀덤 포커</p>
+            </div>
+            <div>
+              <h3 style="color: #667eea">AI 봇</h3>
+              <p>3가지 난이도의<br />지능형 AI 플레이어</p>
+            </div>
+            <div>
+              <h3 style="color: #667eea">온라인 대전</h3>
+              <p>실시간 멀티플레이<br />지원 시스템</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 9: Q&A -->
+    <div class="slide" id="slide9">
+      <div class="slide-content">
+        <h1>💬 Q&A</h1>
+
+        <div style="text-align: center; margin: 3rem 0">
+          <h2 style="border: none; color: #764ba2">감사합니다</h2>
+          <p style="font-size: 1.3rem; color: #666; margin: 2rem 0">
+            질문이나 제안사항이 있으시면<br />편하게 말씀해 주세요
+          </p>
+        </div>
+
+        <h2>프로젝트 관련 문서</h2>
+        <div
+          style="
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+          "
+        >
+          <p>
+            <strong>GitHub Repository:</strong>
+            github.com/ParkSeongGyeol/Texas-holdem
+          </p>
+          <p>
+            <strong>프로젝트 문서:</strong>
+            github.com/ParkSeongGyeol/Texas-holdem/blob/main/README.md
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-buttons">
+      <button class="nav-btn" onclick="previousSlide()">이전</button>
+      <button class="nav-btn" onclick="nextSlide()">다음</button>
+    </div>
+
+    <script>
+      let currentSlide = 1;
+      const totalSlides = 9;
+
+      function showSlide(n) {
+        const slides = document.querySelectorAll(".slide");
+        if (n > totalSlides) currentSlide = 1;
+        if (n < 1) currentSlide = totalSlides;
+
+        slides.forEach((slide) => (slide.style.display = "none"));
+        slides[currentSlide - 1].style.display = "flex";
+      }
+
+      function nextSlide() {
+        currentSlide++;
+        showSlide(currentSlide);
+      }
+
+      function previousSlide() {
+        currentSlide--;
+        showSlide(currentSlide);
+      }
+
+      // Initialize
+      showSlide(currentSlide);
+
+      // Keyboard navigation
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "ArrowRight") nextSlide();
+        if (event.key === "ArrowLeft") previousSlide();
+      });
+    </script>
+  </body>
+</html>
