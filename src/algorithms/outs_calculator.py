@@ -93,3 +93,20 @@ def outs_fullhouse(cards):
             # 페어인 경우 → 투페어 기준으로 풀하우스 아웃츠 계산
             outs = 4
     return outs
+
+def outs_four_of_a_kind(cards):
+    """
+    cards: 문자열 리스트, 예) ['Ah', 'Ad', 'Ac', '2d', '3s']
+    포카드 아웃츠 계산 코드
+    
+    """
+    nums = get_nums(cards)
+
+    unique_nums = set(nums)
+    outs = 0
+
+    for num in unique_nums:
+        cnt = nums.count(num)
+        if cnt == 3:  
+            outs += 4 - cnt  
+    return outs
