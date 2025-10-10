@@ -1,4 +1,7 @@
 
+
+# 임시 카드 구현
+
 rank_map = {'A':14, 'K':13, 'Q':12, 'J':11, 'T':10,
             '9':9, '8':8, '7':7, '6':6, '5':5, '4':4, '3':3, '2':2}
 
@@ -17,7 +20,7 @@ def outs_flush(cards):
     for suit in ['h', 'd', 'c', 's']:     # 하트, 다이아, 클럽, 스페이드
         if suits.count(suit) == 4:        # 같은 무늬 4장 있으면 
             return 13 - suits.count(suit) # 플러시 아웃츠 리턴(9)
-    return 
+    return 0
 
 def outs_straight(cards):
     """
