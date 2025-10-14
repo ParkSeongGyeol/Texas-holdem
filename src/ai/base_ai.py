@@ -11,6 +11,10 @@ from abc import ABC, abstractmethod
 from typing import List, Tuple
 from enum import Enum
 
+class Position(Enum):
+    SB  = "sb"
+    BB  = "bb"
+
 class Action(Enum): #플레이어 액션
     FOLD = "fold"
     CHECK = "check"
@@ -24,6 +28,7 @@ class AIPlayer(ABC): #AI 인터페이스
         self.strategy = strategy
         self.hole_cards: List[str] = []
         self.opponent_patterns = {}  # 상대 패턴 분석 데이터
+        self.position: Position = Position.SB
 
     @abstractmethod #(액션, 금액) 
     def make_decision( 
