@@ -46,9 +46,36 @@ class MonteCarloSimulator:
         num_opponents: int
     ) -> bool:
         """단일 핸드 시뮬레이션"""
-        # TODO: 단일 시뮬레이션 로직 구현 (박우현)
+        
+        # TODO: 단일 시뮬레이션 로직 구현 (박우현) (아래에 임시로 구현됨)
         # 임시 구현: 랜덤 승부
-        return random.random() > 0.5
+
+          # 덱 초기화 및 남은 카드 계산
+        deck = Deck()
+        remaining_cards = [
+            c for c in deck.cards if c not in hole_cards + community_cards
+        ]
+        random.shuffle(remaining_cards)
+
+         # 상대방에게 홀카드 분배
+        opponents = []
+        for _ in range(num_opponents):
+            opponents.append([remaining_cards.pop(), remaining_cards.pop()])
+
+         # 남은 커뮤니티 카드 보충
+        missing_count = 5 - len(community_cards)
+        full_community = community_cards + [remaining_cards.pop() for _ in range(missing_count)]
+
+         # 내 핸드 평가 
+        my_rank = self.evaluator.evaluate_hand(hole_cards + full_community)
+
+         # 상대방 핸드 평가 및 비교 
+        for opp_cards in opponents:
+            opp_rank = self.evaluator.evaluate_hand(opp_cards + full_community)
+            if self.evaluator.compare_hands(opp_rank, my_rank) > 0:
+                return False  # 상대가 더 강함
+
+        return True  # 내가 이김
 
     def parallel_simulation(
         self,
@@ -90,3 +117,24 @@ class MonteCarloSimulator:
             if self._simulate_hand(hole_cards, community_cards, num_opponents):
                 wins += 1
         return wins
+    
+
+
+
+if __name__ == "__main__":
+    simulator = MonteCarloSimulator(num_simulations=1000)
+
+    # 예시: 내 패 = A♠, K♠ / 커뮤니티 카드 3장
+    hole_cards = [Card('A', '♠'), Card('K', '♠')]
+    community_cards = [Card('Q', '♠'), Card('J', '♠'), Card('2', '♦')]
+
+    win_rate_single = simulator.calculate_win_probability(
+        hole_cards, community_cards, num_opponents=2
+    )
+
+    win_rate_parallel = simulator.parallel_simulation(
+        hole_cards, community_cards, num_opponents=2, num_threads=4
+    )
+
+    print(f"단일 스레드 승률: {win_rate_single:.2%}")
+    print(f"병렬 스레드 승률: {win_rate_parallel:.2%}")
