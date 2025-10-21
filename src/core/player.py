@@ -187,3 +187,65 @@ class Player:
     def __repr__(self) -> str:
         """플레이어 객체 표현 (디버깅용)"""
         return f"Player(name={self.name}, chips={self.chips}, state={self.get_state()})"
+
+    # Week 4: 추가 핸드 관리 기능
+
+    def get_hand_strength(self) -> float:
+        """
+        핸드 강도 평가 (임시 구현)
+
+        Returns:
+            0.0 ~ 1.0 사이의 핸드 강도 (높을수록 강함)
+
+        Note:
+            실제 구현은 문현준의 HandEvaluator를 사용해야 함
+        """
+        # TODO: 실제 핸드 평가 로직 구현 (문현준의 HandEvaluator 사용)
+        # 임시로 랜덤 값 반환
+        import random
+        return random.random()
+
+    def get_hand_description(self) -> str:
+        """
+        현재 핸드의 설명 반환
+
+        Returns:
+            핸드의 문자열 설명
+        """
+        if not self.hand:
+            return "핸드 없음"
+
+        hand_str = ", ".join([str(card) for card in self.hand])
+        return f"{hand_str}"
+
+    def clear_hand(self) -> None:
+        """핸드 초기화 (카드 제거)"""
+        self.hand = []
+
+    def has_full_hand(self) -> bool:
+        """2장의 홀 카드를 모두 받았는지 확인"""
+        return len(self.hand) == 2
+
+    def get_total_investment(self) -> int:
+        """
+        현재 핸드에서의 총 투자 금액
+
+        Returns:
+            현재 베팅액 (누적)
+        """
+        return self.current_bet
+
+    def win_pot(self, amount: int) -> None:
+        """
+        팟 획득
+
+        Args:
+            amount: 획득할 칩 수
+
+        Raises:
+            ValueError: amount가 음수일 때
+        """
+        if amount < 0:
+            raise ValueError("획득 금액은 음수일 수 없습니다")
+
+        self.chips += amount
