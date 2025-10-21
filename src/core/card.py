@@ -32,9 +32,19 @@ class Rank(Enum):
     KING = (13, "K")
     ACE = (14, "A")
 
-    def __init__(self, value: int, symbol: str):
-        self.value = value
-        self.symbol = symbol
+    def __init__(self, numeric_value: int, symbol: str):
+        self._numeric_value = numeric_value
+        self._symbol = symbol
+
+    @property
+    def numeric_value(self) -> int:
+        """카드의 숫자 값 (2-14)"""
+        return self._numeric_value
+
+    @property
+    def symbol(self) -> str:
+        """카드의 기호 표현"""
+        return self._symbol
 
 
 class Card:

@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(python test_박성결_week3-7.py:*)"
     ],
     "deny": [],
     "ask": []
