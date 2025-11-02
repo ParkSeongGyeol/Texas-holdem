@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List, Tuple
 
 from base_ai import Action ,AIPlayer, Position
+from random import random #블러핑 확률용
 
 def pot_odds_threshold(pot: int, current_bet: int) -> float:
     """팟오즈 기반 콜 손익분기점 (0~1)"""
@@ -70,68 +71,64 @@ HU_PRE_BIAS  = {Position.SB: -0.02, Position.BB: -0.00} #프리플랍(플랍 전
 HU_POST_BIAS = {Position.SB: -0.05, Position.BB: +0.02} #플랍 이후 
 
 class TightStrategy(Strategy): 
-     def decide(self, ai, community_cards, pot, current_bet, opponents) : 
+    def decide(self, ai, community_cards, pot, current_bet, opponents) : 
         strength = ai.analyze_hand_strength(ai.hole_cards, community_cards)
         st = street(community_cards)
 
-        pot_odds_th = pot_odds_threshold(pot, current_bet)
-        
-        # 기본 임계값(타이트)
-        raise_th_pre, call_th_pre   = 0.72, 0.52
-        raise_th_post, call_th_post = 0.70, 0.55
-
+        # ---------- 프리미엄 게이트 (타이트 전용) ----------
         if st == "pre":
-            if not is_premium(ai.hole_cards):
                 # 공짜면 체크, 상대가 베팅/오픈했으면 폴드
+            if not is_premium(ai.hole_cards):
                 return (Action.CHECK, 0) if current_bet == 0 else (Action.FOLD, 0)
-            
             if ai.position == Position.SB and current_bet == 0 and is_premium(ai.hole_cards):
                 return (Action.RAISE, open_bet_size(pot))
-            
+
+        # ---------- 기본 임계 ----------
+        raise_th_pre, call_th_pre   = 0.72, 0.52
+        raise_th_post, call_th_post = 0.70, 0.55
+        if st == "pre": 
             bias = HU_PRE_BIAS.get(ai.position, 0.0)
             raise_th, call_th = raise_th_pre + bias, call_th_pre + bias * 0.6
         else:
             bias = HU_POST_BIAS.get(ai.position, 0.0)
             raise_th, call_th = raise_th_post + bias, call_th_post + bias * 0.6
-
-        # BB 수비(상대 오픈에 대해 콜 임계 소폭 완화)
-        if st == "pre" and current_bet > 0 and ai.position == Position.BB:
-            call_th -= 0.05
-       
+        
+        # ---------- 팟오즈 반영 (항상 1회) ----------  
         pot_odds_th = pot_odds_threshold(pot, current_bet)
         call_th = max(call_th, pot_odds_th)
-        
+
+        # ---------- BB 수비 (프리플랍, 상대 오픈에 한정) ----------
         if st == "pre" and current_bet > 0 and ai.position == Position.BB:
             call_th = max(pot_odds_th, call_th - 0.05)
 
-        # ----- 액션 결정 -----
+        # ---------- 액션 ----------
         if current_bet == 0:
-            # 오픈/씨벳: 강하면 베팅, 아니면 체크
+            # 강하면 오픈/씨벳
             if strength >= raise_th:
                 bet = open_bet_size(pot) if st == "pre" else cbet_size(pot)
                 return (Action.RAISE, bet)
+            # (타이트) SB이고 플랍/턴에서 아주 낮은 확률로 스틸 (약간 약할 때만) 
+            if st in ("flop", "turn") and ai.position == Position.SB and 0.42 <= strength < raise_th:
+                if random() < 0.03:  # 3%
+                    return (Action.RAISE, max(10, pot // 3))
             return (Action.CHECK, 0)
-
+        
         # 리레이즈(3bet/레이즈 백): 아주 강할 때
         reraise_th = min(0.98, raise_th + 0.08)  # 타이트는 더 강해야 리레이즈
         if strength >= reraise_th:
             return (Action.RAISE, reraise_size(current_bet))
-
         # 콜: 강도 >= 콜 임계(= max(기본, 팟오즈))
         if strength >= call_th:
             return (Action.CALL, current_bet)
-
         # 그 외 폴드
         return (Action.FOLD, 0)
 
 class LooseStrategy(Strategy): 
-     def decide(self, ai, community_cards, pot, current_bet, opponents) : 
+    def decide(self, ai, community_cards, pot, current_bet, opponents) : 
         strength = ai.analyze_hand_strength(ai.hole_cards, community_cards)
         st = street(community_cards)
 
-        pot_odds_th = pot_odds_threshold(pot, current_bet)
-
-        # 기본 임계값(루즈)
+        # ---------- 기본 임계 (루즈는 완만) ----------
         raise_th_pre,  call_th_pre  = 0.58, 0.30
         raise_th_post, call_th_post = 0.60, 0.40
 
@@ -141,34 +138,46 @@ class LooseStrategy(Strategy):
         else:
             bias = HU_POST_BIAS.get(ai.position, 0.0) * 0.8     # 플랍 이후 SB 이점 강화
             raise_th, call_th = raise_th_post + bias, max(0.18, call_th_post + bias * 0.6)
-
-        # BB 수비 강화
-        if st == "pre" and current_bet > 0 and ai.position == Position.BB:
-            call_th = max(pot_odds_th - 0.04, call_th - 0.08)
-
+        
+        # ---------- 팟오즈 반영 (한 번) ----------
         pot_odds_th = pot_odds_threshold(pot, current_bet)
         call_th = max(call_th, pot_odds_th - 0.02)
 
+        # ---------- BB 수비 (프리플랍, 상대 오픈 시) ----------
+        if st == "pre" and current_bet > 0 and ai.position == Position.BB:
+            call_th = max(pot_odds_th - 0.04, call_th - 0.08)
+        
+        # ---------- 액션 ----------
         if current_bet == 0:
+            # 강하면 오픈/씨벳
             if strength >= raise_th:
-                bet = open_bet_size(pot) if street == "pre" else cbet_size(pot)
+                bet = open_bet_size(pot) if st == "pre" else cbet_size(pot)
                 return (Action.RAISE, bet)
 
-            # SB 프리플랍 스틸(살짝 강하면 소액 오픈)
-            if ai.position == Position.SB and street == "pre" and strength >= call_th + 0.12:
+            # SB 프리플랍 스틸: call_th보다 살짝 높으면 소액 오픈
+            if ai.position == Position.SB and st == "pre" and strength >= call_th + 0.12:
                 return (Action.RAISE, max(10, pot // 5))
 
-            # 플랍/턴 중간 강도 프로브
-            if street in ("flop", "turn") and 0.45 <= strength < raise_th:
+            # 플랍/턴 중간 강도 프로브 (정보 수집 + 폴드 이득)
+            if st in ("flop", "turn") and 0.45 <= strength < raise_th:
                 return (Action.RAISE, max(10, pot // 3))
-
+            
+            # 체크 상황 블러핑(확률)
+            if st in ("flop", "turn") and random() < 0.12:  # 12%
+                return (Action.RAISE, max(10, pot // 3))
             return (Action.CHECK, 0)
 
-        # 루즈는 리레이즈 임계 조금 낮춤
+        # 상대 베팅에 맞서는 구간
+        # 리레이즈(3bet): 루즈는 조금 낮은 기준
         reraise_th = min(0.95, raise_th + 0.05)
         if strength >= reraise_th:
             return (Action.RAISE, reraise_size(current_bet))
 
+        # 페이스 블러핑(확률): SB이고 리버 전, 약할 때 가끔 레이즈 압박
+        if st in ("flop", "turn") and ai.position == Position.SB and strength < call_th:
+            if random() < 0.08:  # 8%
+                return (Action.RAISE, max(10, pot // 3))
+        # 콜
         if strength >= call_th:
             return (Action.CALL, current_bet)
 
