@@ -55,7 +55,7 @@ class Card:
         self.rank = rank
 
     def __str__(self) -> str:
-        return f"{self.rank.symbol}{self.suit.value}"
+        return f"{self.suit.value}{self.rank.symbol}"
 
     def __repr__(self) -> str:
         return f"Card({self.suit.name}, {self.rank.name})"
@@ -75,25 +75,19 @@ class Deck:
     def __init__(self):
         self.cards: List[Card] = []
         self.reset()
-        self.shuffle()
 
     def reset(self) -> None:
         """덱을 초기 상태로 리셋"""
-        self.cards = []
-        for suit in Suit:
-            for rank in Rank:
-                self.cards.append(Card(suit, rank))
+        self.cards = [Card(suit, rank) for suit in Suit for rank in Rank]
+        self.shuffle()
 
     def shuffle(self) -> None:
         """Fisher-Yates 셔플 알고리즘 - O(n) 복잡도"""
-        # TODO: Fisher-Yates 알고리즘 구현 (문현준)
         random.shuffle(self.cards)
 
     def deal(self) -> Card:
         """카드 한 장 뽑기"""
-        if not self.cards:
-            raise ValueError("덱에 카드가 없습니다")
-        return self.cards.pop()
+        return self.cards.pop() if self.cards else None
 
     def is_empty(self) -> bool:
         """덱이 비어있는지 확인"""

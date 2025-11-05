@@ -1,24 +1,25 @@
 """
 족보 판정 알고리즘 - 문현준 담당
-비트마스킹을 활용한 O(1) 족보 판정
+C(7,5) 조합을 통한 족보 판정
 """
 
 from typing import List, Tuple
 from enum import Enum
+from itertools import combinations
 
-from src.core.card import Card, Rank, Suit
+from src.core.card import Card, Rank
 
 
 class HandRank(Enum):
     """포커 족보 순위"""
     HIGH_CARD = (1, "하이카드")
-    PAIR = (2, "원페어")
+    ONE_PAIR = (2, "원페어")
     TWO_PAIR = (3, "투페어")
-    THREE_KIND = (4, "트리플")
+    THREE_OF_A_KIND = (4, "트리플")
     STRAIGHT = (5, "스트레이트")
     FLUSH = (6, "플러시")
     FULL_HOUSE = (7, "풀하우스")
-    FOUR_KIND = (8, "포카드")
+    FOUR_OF_A_KIND = (8, "포카드")
     STRAIGHT_FLUSH = (9, "스트레이트 플러시")
     ROYAL_FLUSH = (10, "로열 플러시")
 
@@ -28,73 +29,97 @@ class HandRank(Enum):
 
 
 class HandEvaluator:
-    """핸드 평가기 - 비트마스킹 활용"""
+    """7장의 카드로 만들 수 있는 최상의 패를 평가하는 클래스"""
+
+    RANK_VALUES = {rank.symbol: rank.numeric_value for rank in Rank}
 
     @staticmethod
-    def evaluate_hand(cards: List[Card]) -> Tuple[HandRank, List[int]]:
-        """
-        7장의 카드에서 최고 족보 평가
-        Returns: (족보, 키커들)
-        """
-        if len(cards) != 7:
-            raise ValueError("7장의 카드가 필요합니다")
+    def evaluate_hand(seven_cards: List[Card]) -> Tuple[HandRank, List[Card]]:
+        """7장의 카드 중 5장을 뽑아 만들 수 있는 최상의 조합을 찾습니다."""
+        if len(seven_cards) != 7:
+            raise ValueError("7장의 카드가 필요합니다.")
 
-        # TODO: 비트마스킹을 활용한 족보 판정 알고리즘 구현 (문현준)
-        # 1. C(7,5) = 21가지 조합 생성
-        # 2. 각 조합에 대해 족보 판정
-        # 3. 최고 족보 반환
+        best_hand_rank = HandRank.HIGH_CARD
+        best_hand_cards = []
+        best_hand_score = (0, [])
 
-        # 임시 구현
-        return HandRank.HIGH_CARD, [14, 13, 12, 11, 10]
+        for hand_combination in combinations(seven_cards, 5):
+            current_rank, score_values = HandEvaluator._evaluate_5_card_hand(list(hand_combination))
+            score = (current_rank.value, score_values)
 
-    @staticmethod
-    def is_flush(cards: List[Card]) -> bool:
-        """플러시 여부 확인"""
-        # TODO: 비트마스킹으로 플러시 판정 (문현준)
-        suits = [card.suit for card in cards]
-        return len(set(suits)) == 1
+            if score > best_hand_score:
+                best_hand_score = score
+                best_hand_rank = current_rank
+                best_hand_cards = list(hand_combination)
+        
+        return best_hand_rank, best_hand_cards
 
     @staticmethod
-    def is_straight(ranks: List[int]) -> bool:
-        """스트레이트 여부 확인"""
-        # TODO: 비트마스킹으로 스트레이트 판정 (문현준)
-        sorted_ranks = sorted(set(ranks))
-        if len(sorted_ranks) < 5:
-            return False
+    def _evaluate_5_card_hand(five_cards: List[Card]) -> Tuple[HandRank, List[int]]:
+        """5장의 카드로 패를 평가합니다."""
+        suits = [c.suit for c in five_cards]
+        ranks = sorted([HandEvaluator.RANK_VALUES[c.rank.symbol] for c in five_cards], reverse=True)
 
-        # 연속된 5장 확인
-        for i in range(len(sorted_ranks) - 4):
-            if sorted_ranks[i+4] - sorted_ranks[i] == 4:
-                return True
+        counts = {v: ranks.count(v) for v in set(ranks)}
+        count_values = sorted(counts.values(), reverse=True)
 
-        # A-2-3-4-5 스트레이트 (백스트레이트) 확인
-        if sorted_ranks == [2, 3, 4, 5, 14]:
-            return True
+        is_flush = len(set(suits)) == 1
+        is_straight, straight_ranks = HandEvaluator._is_straight(ranks)
 
-        return False
+        if is_flush and is_straight and ranks[0] == 14: # Ace-high straight flush
+            return HandRank.ROYAL_FLUSH, straight_ranks
+        if is_flush and is_straight:
+            return HandRank.STRAIGHT_FLUSH, straight_ranks
+        if 4 in count_values:
+            return HandRank.FOUR_OF_A_KIND, HandEvaluator._get_kickers(ranks, counts, [4, 1])
+        if count_values == [3, 2]:
+            return HandRank.FULL_HOUSE, HandEvaluator._get_kickers(ranks, counts, [3, 2])
+        if is_flush:
+            return HandRank.FLUSH, ranks
+        if is_straight:
+            return HandRank.STRAIGHT, straight_ranks
+        if 3 in count_values:
+            return HandRank.THREE_OF_A_KIND, HandEvaluator._get_kickers(ranks, counts, [3, 1, 1])
+        if count_values == [2, 2, 1]:
+            return HandRank.TWO_PAIR, HandEvaluator._get_kickers(ranks, counts, [2, 2, 1])
+        if 2 in count_values:
+            return HandRank.ONE_PAIR, HandEvaluator._get_kickers(ranks, counts, [2, 1, 1, 1])
+        
+        return HandRank.HIGH_CARD, ranks
 
     @staticmethod
-    def compare_hands(
-        hand1: Tuple[HandRank, List[int]],
-        hand2: Tuple[HandRank, List[int]]
-    ) -> int:
-        """
-        두 핸드 비교
-        Returns: 1 (hand1 승), -1 (hand2 승), 0 (무승부)
-        """
-        # TODO: 상세한 핸드 비교 로직 구현 (문현준)
-        rank1, kickers1 = hand1
-        rank2, kickers2 = hand2
+    def _is_straight(ranks: List[int]) -> Tuple[bool, List[int]]:
+        """스트레이트 여부를 확인하고, 스트레이트를 구성하는 랭크를 반환합니다."""
+        rank_set = sorted(list(set(ranks)), reverse=True)
+        if len(rank_set) < 5:
+            return False, []
 
-        if rank1.value > rank2.value:
-            return 1
-        elif rank1.value < rank2.value:
-            return -1
-        else:
-            # 같은 족보일 때 키커 비교
-            for k1, k2 in zip(kickers1, kickers2):
-                if k1 > k2:
-                    return 1
-                elif k1 < k2:
-                    return -1
-            return 0
+        # A-2-3-4-5 (Wheel) straight
+        if set(ranks) >= {14, 2, 3, 4, 5}:
+            return True, [5, 4, 3, 2, 1] # Ace is low
+
+        for i in range(len(rank_set) - 4):
+            if rank_set[i] - rank_set[i+4] == 4:
+                straight_ranks = rank_set[i:i+5]
+                return True, straight_ranks
+        
+        return False, []
+
+    @staticmethod
+    def _get_kickers(all_ranks: List[int], counts: dict, structure: List[int]) -> List[int]:
+        """족보에 따른 키커를 정렬하여 반환합니다."""
+        sorted_ranks = []
+        # Group ranks by their counts (e.g., pairs, three of a kind)
+        grouped_ranks = {count: [] for count in set(counts.values())}
+        for rank, count in counts.items():
+            grouped_ranks[count].append(rank)
+        
+        for count in structure:
+            # Ranks within the same group should be sorted high to low
+            ranks_for_count = sorted(grouped_ranks[count], reverse=True)
+            sorted_ranks.extend(ranks_for_count)
+            # Remove used ranks to avoid duplication
+            for rank in ranks_for_count:
+                grouped_ranks[count].remove(rank)
+
+        return sorted_ranks
