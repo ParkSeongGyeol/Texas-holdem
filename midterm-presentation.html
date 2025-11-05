@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>텍사스 홀덤 AI 프로젝트 - 중간 발표</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 2rem auto; padding: 0 1rem; background-color: #f8f9fa; }
+        h1, h2, h3 { color: #0056b3; }
+        h1 { text-align: center; border-bottom: 2px solid #0056b3; padding-bottom: 10px; margin-bottom: 2rem; }
+        h2 { border-bottom: 1px solid #dee2e6; padding-bottom: 8px; margin-top: 40px; }
+        .container { background-color: #fff; padding: 2rem 2.5rem; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+        .team-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; }
+        .member-card { background: #f1f3f5; padding: 1.5rem; border-radius: 8px; border-left: 5px solid #007bff; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .member-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+        .member-card h3 { margin-top: 0; color: #007bff; }
+        ul { padding-left: 20px; margin-top: 1rem; }
+        li { margin-bottom: 0.5rem; }
+        strong { color: #c92a2a; }
+        .status-done { color: #2f9e44; font-weight: bold; }
+        .status-progress { color: #f08c00; font-weight: bold; }
+        .status-pending { color: #e03131; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #dee2e6; }
+        th { background-color: #f1f3f5; }
+        code { background-color: #e9ecef; padding: .2em .4em; margin: 0; font-size: 85%; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎲 텍사스 홀덤 AI 프로젝트 중간 발표</h1>
+
+        <h2>1. 프로젝트 개요</h2>
+        <p>알고리즘 수업에서 학습한 이론을 실제 텍사스 홀덤 포커 게임에 적용하여, 다양한 난이도의 AI와 대전할 수 있는 완전한 게임 시스템을 개발하는 것을 목표로 합니다.</p>
+        <ul>
+            <li><strong>프로젝트명:</strong> Texas Hold'em Poker Game with AI</li>
+            <li><strong>팀원:</strong> 문현준, 박성결, 박종호, 박우현</li>
+            <li><strong>핵심 기술:</strong> Python, FSM, Minimax, Monte Carlo Simulation, Bitmasking</li>
+        </ul>
+
+        <h2>2. 아키텍처 및 핵심 기능</h2>
+        <h3>모듈화된 구조</h3>
+        <p>프로젝트는 역할에 따라 <code>core</code>, <code>ai</code>, <code>algorithms</code> 세 가지 핵심 디렉토리로 분리되어 유지보수성과 확장성을 높였습니다.</p>
+        <ul>
+            <li><code>src/core</code>: 게임의 기본 규칙과 흐름을 담당합니다. (Card, Deck, Player, Game)
+            <li><code>src/ai</code>: AI의 의사결정 로직을 담당합니다. (Base AI, Rule-based AI)
+            <li><code>src/algorithms</code>: 족보 판정, 승률 계산 등 복잡한 연산을 담당합니다. (Hand Evaluator, Monte Carlo)
+        </ul>
+        <h3>게임 상태 머신 (FSM)</h3>
+        <p><code>src/core/game.py</code>의 <code>GamePhase</code> 열거형(Enum)을 통해 게임의 흐름을 관리합니다. 이를 통해 각 단계(PREFLOP → FLOP → TURN → RIVER → SHOWDOWN)가 순서대로 진행되며, 각 단계에 맞는 로직이 명확하게 실행됩니다.</p>
+
+        <h2>3. 적용된 알고리즘 현황</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>알고리즘</th>
+                    <th>담당자</th>
+                    <th>구현 상태</th>
+                    <th>설명</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Fisher-Yates Shuffle</strong></td>
+                    <td>문현준</td>
+                    <td class="status-done">완료</td>
+                    <td><code>Deck.shuffle()</code>에 구현되어 카드를 무작위로 섞습니다.</td>
+                </tr>
+                <tr>
+                    <td><strong>규칙 기반 핸드 분석</strong></td>
+                    <td>박종호</td>
+                    <td class="status-progress">부분 완료</td>
+                    <td>프리플랍 핸드 강도를 테이블 기반으로 분석합니다. (플랍 이후는 미완)</td>
+                </tr>
+                <tr>
+                    <td><strong>몬테카를로 시뮬레이션</strong></td>
+                    <td>박우현</td>
+                    <td class="status-progress">부분 완료</td>
+                    <td>승률 계산을 위한 병렬 처리 구조가 완성되었습니다.</td>
+                </tr>
+                <tr>
+                    <td><strong>조합론 (C(7,5))</strong></td>
+                    <td>문현준</td>
+                    <td class="status-pending">미구현</td>
+                    <td>7장의 카드 중 최상의 족보를 찾기 위해 필요합니다.</td>
+                </tr>
+                <tr>
+                    <td><strong>비트마스킹</strong></td>
+                    <td>문현준</td>
+                    <td class="status-pending">미구현</td>
+                    <td>O(1) 시간 복잡도로 족보를 판정하기 위해 계획 중입니다.</td>
+                </tr>
+                <tr>
+                    <td><strong>미니맥스</strong></td>
+                    <td>박우현</td>
+                    <td class="status-pending">시작 단계</td>
+                    <td>기본 구조만 구현되었으며, 핵심 로직은 미구현 상태입니다.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>4. 모듈별 상세 진행 현황</h2>
+        <div class="team-grid">
+            <div class="member-card">
+                <h3>문현준 (카드 시스템)</h3>
+                <ul>
+                    <li><code>Card</code>, <code>Deck</code> 클래스: <span class="status-done">완료 (95%)</span></li>
+                    <li><code>HandEvaluator</code> (족보 판정): <span class="status-pending">진행 중 (20%)</span></li>
+                </ul>
+            </div>
+            <div class="member-card">
+                <h3>박성결 (게임 로직)</h3>
+                <ul>
+                    <li><code>Player</code> 클래스: <span class="status-done">완료 (100%)</span></li>
+                    <li><code>PokerGame</code> (게임 흐름): <span class="status-done">완료 (85%)</span></li>
+                </ul>
+            </div>
+            <div class="member-card">
+                <h3>박종호 (AI 전략)</h3>
+                <ul>
+                    <li>AI 기본 인터페이스: <span class="status-done">완료 (100%)</span></li>
+                    <li>규칙 기반 AI (프리플랍): <span class="status-progress">진행 중 (60%)</span></li>
+                </ul>
+            </div>
+            <div class="member-card">
+                <h3>박우현 (고급 AI)</h3>
+                <ul>
+                    <li>몬테카를로 (병렬 구조): <span class="status-progress">진행 중 (50%)</span></li>
+                    <li>미니맥스 (알고리즘 골격): <span class="status-pending">시작 단계 (15%)</span></li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>5. 향후 개발 계획</h2>
+        <h3>1순위 과제: HandEvaluator 완성 (담당: 문현준)</h3>
+        <p>프로젝트의 가장 핵심적인 블로커(Blocker)입니다. 비트마스킹과 조합론을 적용하여 7장의 카드 중 최상의 족보를 빠르고 정확하게 찾아내는 기능이 완성되어야, 다른 모든 AI 및 게임 로직이 정상적으로 동작할 수 있습니다.</p>
+        <h3>AI 고도화 계획</h3>
+        <ul>
+            <li>플랍, 턴, 리버 단계를 고려한 AI 판단 로직을 구체화합니다. (박종호)</li>
+            <li>완성된 `HandEvaluator`를 몬테카를로 및 미니맥스 알고리즘에 연동하여 실제 승률 계산 및 최적의 수를 탐색합니다. (박우현)</li>
+        </ul>
+        <h3>시스템 통합 및 테스트</h3>
+        <ul>
+            <li>모든 모듈을 <code>main.py</code>에 통합하여 전체 게임 사이클을 완성합니다.</li>
+            <li>다양한 시나리오에 대한 통합 테스트를 진행하고 발견된 버그를 수정합니다.</li>
+        </ul>
+        <h3>추가 목표 (시간 허용 시)</h3>
+        <ul>
+            <li>FastAPI와 WebSocket을 이용한 웹 기반 UI 구현</li>
+            <li>여러 AI가 동시에 경쟁하는 토너먼트 모드 개발</li>
+        </ul>
+    </div>
+</body>
+</html>
