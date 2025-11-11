@@ -2,7 +2,7 @@
 미니맥스 알고리즘 - 박우현 담당
 게임 트리 탐색 및 α-β 가지치기
 """
-
+import copy
 from typing import List, Tuple, Optional
 from enum import Enum
 
@@ -100,19 +100,66 @@ class MinimaxAI:
     def _is_terminal_node(self, node: GameNode) -> bool:
         """터미널 노드 여부 확인"""
         # TODO: 게임 종료 조건 확인 (박우현)
+        
         active_players = [p for p in node.players if p.is_active and not p.has_folded]
-        return len(active_players) <= 1
+
+        # 한 명만 남음 → 게임 종료
+        if len(active_players) <= 1:
+            return True
+
+        # 모든 플레이어가 콜했을 때 + 커뮤니티 카드가 리버까지 공개됨
+        if all(p.current_bet == node.current_bet for p in active_players) and len(node.community_cards) == 5:
+            return True
+
+        return False
 
     def _evaluate_node(self, node: GameNode) -> float:
         """노드 평가 함수"""
         # TODO: 게임 상태 평가 함수 구현 (박우현)
         # 팟 크기, 핸드 강도, 포지션 등을 고려한 평가
-        return 0.0
+        ai_player = node.players[node.current_player_idx]
+        hand_strength = ai_player.evaluate_hand(node.community_cards)  # 0~1
+        stack_ratio = ai_player.stack / sum(p.stack for p in node.players)
+        pot_factor = node.pot / 1000
+        
+        score = (hand_strength * 0.6) + (stack_ratio * 0.3) + (pot_factor * 0.1)
+        return score
 
     def _generate_children(self, node: GameNode) -> List[GameNode]:
         """자식 노드 생성"""
         # TODO: 가능한 액션들로부터 자식 노드 생성 (박우현)
-        children = []
         # 현재 플레이어의 가능한 액션들(FOLD, CALL, RAISE)에 대해
         # 각각 새로운 GameNode 생성
+        children = []
+        current_player = node.players[node.current_player_idx]
+        next_idx = (node.current_player_idx + 1) % len(node.players)
+
+        possible_actions = []
+        if current_player.stack == 0:
+            possible_actions = [Action.CHECK]
+        else:
+            possible_actions = [Action.FOLD, Action.CALL]
+            if current_player.stack > node.current_bet * 2:
+                possible_actions.append(Action.RAISE)
+
+        for action in possible_actions:
+            new_node = copy.deepcopy(node)
+
+            if action == Action.FOLD:
+                new_node.players[new_node.current_player_idx].has_folded = True
+            elif action == Action.CALL:
+                call_amount = node.current_bet - current_player.current_bet
+                new_node.pot += call_amount
+                new_node.players[new_node.current_player_idx].stack -= call_amount
+            elif action == Action.RAISE:
+                raise_amount = node.current_bet * 2
+                new_node.current_bet = raise_amount
+                new_node.pot += raise_amount
+                new_node.players[new_node.current_player_idx].stack -= raise_amount
+
+            new_node.current_player_idx = next_idx
+            children.append(new_node)
+
         return children
+       
+        

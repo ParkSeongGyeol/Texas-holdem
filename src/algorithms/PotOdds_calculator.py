@@ -1,3 +1,5 @@
+from src.algorithms.outs_calculator import PokerOutsCalculator
+
 def pot_odds(pot, call_amount):
     """
     pot: 현재 팟 금액

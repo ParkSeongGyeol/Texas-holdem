@@ -16,6 +16,8 @@ class MonteCarloSimulator:
 
     def __init__(self, num_simulations: int = 1000):
         self.num_simulations = num_simulations
+        self.evaluator = HandEvaluator()
+
 
     def calculate_win_probability(
         self,
@@ -47,7 +49,7 @@ class MonteCarloSimulator:
     ) -> bool:
         """단일 핸드 시뮬레이션"""
         
-        # TODO: 단일 시뮬레이션 로직 구현 (박우현) (아래에 임시로 구현됨)
+        # TODO: 단일 시뮬레이션 로직 구현 (박우현)
         # 임시 구현: 랜덤 승부
 
           # 덱 초기화 및 남은 카드 계산
@@ -72,7 +74,7 @@ class MonteCarloSimulator:
          # 상대방 핸드 평가 및 비교 
         for opp_cards in opponents:
             opp_rank = self.evaluator.evaluate_hand(opp_cards + full_community)
-            if self.evaluator.compare_hands(opp_rank, my_rank) > 0:
+            if opp_rank > my_rank :
                 return False  # 상대가 더 강함
 
         return True  # 내가 이김

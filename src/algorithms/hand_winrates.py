@@ -1,5 +1,8 @@
+from src.algorithms.outs_calculator import PokerOutsCalculator
+
 #  outs: 승리로 이어지는 카드 수
 #  known_cards: 현재 보이는 카드 수 (핸드+보드)
+#  내 핸드가 메이드 되는 확률 계산
 
 def hand_winrates1(outs, known_cards):
     """
