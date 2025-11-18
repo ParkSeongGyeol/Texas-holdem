@@ -24,6 +24,8 @@ class Action(Enum): #플레이어 액션
 
 class AIPlayer(ABC): #AI 인터페이스
     def __init__(self, name: str, chips: int = 1000, difficulty_level: int = 1, strategy = None):
+        self.name = name
+        self.chips = chips
         self.difficulty_level = difficulty_level
         self.strategy = strategy
         self.hole_cards: List[str] = []

@@ -1,7 +1,7 @@
 from typing import List, Tuple
 
 from base_ai import AIPlayer, Action
-from strategies import Strategy, TightStrategy
+from strategies import TightStrategy, LooseStrategy, Strategy
 
 RANKS = "23456789TJQKA"
 
@@ -103,4 +103,90 @@ class RuleBasedAI(AIPlayer):
         if self.strategy:
             return self.strategy.decide(self, community_cards, pot, current_bet, opponents)
         return (Action.CHECK if current_bet == 0 else Action.FOLD, 0)
-        
+
+
+class AdaptiveRuleBasedAI(RuleBasedAI):
+    """
+    적응형 AI
+    - 상대 행동 패턴을 보고 tight / loose 전략을 자동으로 바꾼다.
+    - 9주차: 적응형 AI 설계 / 상대 스타일 분석 / 동적 전략 변경
+    """
+
+    def __init__(
+        self,
+        name: str,
+        chips: int = 1000,
+        difficulty_level: int = 1,
+        base_style: str = "tight",
+    ):
+        if base_style == "loose":
+            strategy = LooseStrategy()
+        else:
+            strategy = TightStrategy()
+
+        super().__init__(name, chips, difficulty_level, strategy)
+        self.current_style = "loose" if base_style == "loose" else "tight"
+
+    # 상대 스타일 분석 ------------------------------------
+
+    def _estimate_opponent_style(self, opponent_name: str) -> str:
+        """
+        AIPlayer.update_opponent_pattern 에 의해 저장된
+        self.opponent_patterns 를 이용해서 상대 스타일을 추정한다.
+
+        - RAISE + CALL 비율이 높으면 loose
+        - 그렇지 않으면 tight
+        """
+        history = self.opponent_patterns.get(opponent_name)
+        if not history:
+            return self.current_style
+
+        total = len(history)
+        if total == 0:
+            return self.current_style
+
+        raises = sum(1 for h in history if h["action"] == Action.RAISE)
+        calls = sum(1 for h in history if h["action"] == Action.CALL)
+
+        aggr_ratio = (raises + calls) / total
+
+        # 기준치는 필요에 따라 조절 가능
+        return "loose" if aggr_ratio >= 0.6 else "tight"
+
+    def _switch_style(self, new_style: str) -> None:
+        """
+        현재 스타일과 다르면 전략 객체를 교체한다.
+        """
+        if new_style == self.current_style:
+            return
+
+        self.current_style = new_style
+        if new_style == "tight":
+            self.strategy = TightStrategy()
+        elif new_style == "loose":
+            self.strategy = LooseStrategy()
+
+    # 동적 전략 변경 + 의사결정 ----------------------------
+
+    def make_decision(
+        self,
+        community_cards: list[str],
+        pot: int,
+        current_bet: int,
+        opponents: list,
+    ):
+        """
+        기존 RuleBasedAI.make_decision 을 오버라이드해서
+
+        1. 상대 스타일을 분석하고
+        2. 필요하면 tight / loose 전략을 교체한 뒤
+        3. 부모의 make_decision 으로 실제 액션을 요청한다.
+        """
+
+        if opponents:
+            main_opponent = opponents[0]
+            # AIPlayer.update_opponent_pattern 에서 opponent.name 으로 저장한다고 가정
+            est_style = self._estimate_opponent_style(main_opponent.name)
+            self._switch_style(est_style)
+
+        return super().make_decision(community_cards, pot, current_bet, opponents)
