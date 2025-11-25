@@ -7,7 +7,7 @@
 2025년 2학기 알고리즘 수업 팀 프로젝트로, 다양한 알고리즘을 활용하여 완전한 텍사스 홀덤 포커 게임을 구현합니다.
 
 **팀원**: 문현준, 박성결, 박종호, 박우현
-**개발 기간**: 10주 (전반부 3\~7주차, 후반부 9\~14주차)
+**개발 기간**: 10주 (전반부 3~7주차, 후반부 9~14주차)
 
 ## 🎯 프로젝트 목표
 
@@ -24,6 +24,85 @@
 - **4명** 팀원 협력
 - **3단계** AI 난이도 구현
 - **6개** 핵심 알고리즘 활용
+
+## ⚡ 주요 기능
+
+### 필수 기능
+
+- **🎯 완전한 포커 게임**: 프리플롭부터 리버까지 모든 라운드
+- **🤖 2단계 AI 시스템**: 규칙 기반 타이트/루즈 AI
+- **💰 완벽한 베팅 시스템**: Check, Call, Raise, Fold, All-in
+- **👥 2인 온라인 대전**: WebSocket 기반 실시간 대전 (계획)
+
+### AI 난이도별 특징
+
+#### Level 1: 타이트 플레이어 (Tight Strategy)
+
+- 프리미엄 핸드 위주로 플레이
+- 보수적 베팅 전략
+- 블러핑 최소화
+- 예측 가능한 패턴
+
+#### Level 2: 루즈 어그레시브 (Loose Strategy)
+
+- 넓은 범위의 핸드로 참여
+- 공격적 베팅 및 블러핑
+- 팟 오즈와 포지션을 적극 활용
+- 예측이 더 어려운 패턴
+
+#### Level 3: 적응형 AI (계획)
+
+- 상대 스타일 분석
+- 동적 전략 변경
+- 몬테카를로 시뮬레이션
+- 미니맥스 의사결정
+
+### 추가 기능 (계획)
+
+- **토너먼트 모드**: 여러 AI가 경쟁하는 라운드 로빈 방식
+- **통계 분석**: 승률, 수익률, 핸드별 성과 분석
+- **디버그 모드**: 카드 공개, AI 사고 과정 표시
+
+## 🔧 실행 방법
+
+```bash
+# 프로젝트 클론
+git clone https://github.com/ParkSeongGyeol/Texas-holdem.git
+cd Texas-holdem
+
+# 가상환경 생성 및 활성화
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# venv\Scripts\activate   # Windows
+
+# 의존성 설치 (개발용)
+pip install -e .[dev]
+
+# 게임 실행
+python src/main.py
+
+# 테스트 실행
+pytest tests/
+
+# 코드 스타일 검사
+black src/
+flake8 src/
+- **`src/core/player.py`**: `get_hand_strength(community_cards)` 메서드는 `HandEvaluator`를 호출하여 0.0 ~ 1.0 사이의 점수를 반환합니다.
+- **`src/algorithms/hand_evaluator.py`**: 5~7장의 카드를 받아 최적의 족보를 판정합니다.
+
+### 2. 남은 개발 항목 (우선순위)
+1. **AI 의사결정 로직 (`src/ai/`)**: `Player.get_hand_strength`를 활용하여 AI가 베팅(Call/Fold/Raise)을 결정하는 로직을 구현해야 합니다. (박종호님 담당)
+2. **게임 루프 통합 (`src/core/game.py`)**: 게임 진행 중 각 단계(Flop, Turn, River)마다 플레이어의 액션을 요청할 때, AI 플레이어는 위 로직을 사용해야 합니다.
+
+### 3. 코드 읽기 순서 추천 (Newcomer Guide)
+
+프로젝트를 처음 접하는 분들은 다음 순서로 코드를 읽는 것을 추천합니다.
+
+1.  **`src/main.py`**: 프로그램의 진입점입니다. `PokerGame` 객체가 어떻게 생성되고 실행되는지 확인하세요.
+2.  **`src/core/game.py`**: 게임의 전체 흐름(`new_hand` -> `betting_round` -> `advance_phase`)을 파악하세요. 위 흐름도를 참고하면 좋습니다.
+3.  **`src/core/player.py`**: 플레이어의 상태 관리와 `get_hand_strength` 메서드를 확인하세요.
+4.  **`src/algorithms/hand_evaluator.py`**: 포커 족보 판정 로직의 세부 구현을 살펴보세요.
+5.  **`tests/verify_hand_strength.py`**: 실제 코드가 어떻게 동작하는지 테스트 스크립트를 통해 확인하세요.
 
 ## 🧮 핵심 알고리즘
 
@@ -42,6 +121,39 @@
 - **FastAPI** - 웹 서버 프레임워크 (계획)
 - **WebSocket** - 실시간 통신 (계획)
 - **NumPy** - 수치 연산
+
+## 🗂️ 프로젝트 구조
+
+```
+03_poker_game/
+├── src/
+│   ├── __init__.py
+│   ├── main.py              # 메인 실행 파일
+│   ├── core/                # 핵심 게임 로직
+│   │   ├── __init__.py
+│   │   ├── card.py          # Card/Deck 클래스 (문현준)
+│   │   ├── player.py        # Player 클래스 (박성결)
+│   │   └── game.py          # PokerGame 클래스 (박성결)
+│   ├── ai/                  # AI 모듈
+│   │   ├── __init__.py
+│   │   ├── base_ai.py       # AI 인터페이스 (박종호)
+│   │   ├── rule_based_ai.py # 규칙 기반 AI (박종호)
+│   │   └── strategies.py    # AI 베팅 전략 (Tight, Loose) (박종호)
+│   ├── algorithms/          # 핵심 알고리즘
+│   │   ├── __init__.py
+│   │   ├── hand_evaluator.py # 족보 판정 (문현준)
+│   │   ├── monte_carlo.py    # 몬테카를로 (박우현)
+│   │   └── minimax.py        # 미니맥스 (박우현)
+│   └── web/                 # 웹 인터페이스 (계획)
+│       └── __init__.py
+├── tests/                   # 테스트 모듈
+│   ├── __init__.py
+│   ├── test_core.py         # 코어 모듈 테스트
+│   └── test_game_flow.py    # 게임 플로우 테스트
+├── requirements.txt         # Python 의존성
+├── setup.py                 # 패키지 설정
+└── README.md                # 프로젝트 문서
+```
 
 ## 👥 개인별 역할 분담
 
@@ -62,6 +174,7 @@
 - 팟 분배 알고리즘
 - 승자 판정 로직
 - 콘솔 UI 및 토너먼트 모드
+- **[NEW] 핸드 강도 평가 연동 (`Player.get_hand_strength`)**
 
 ### 🤖 박종호 - AI 전략 & 의사결정
 
@@ -105,103 +218,6 @@
 | **12주차** | 최종 검증             | 사용자 테스트 | AI 전략 문서화   | 시스템 통합    |
 | **13주차** | 발표 자료 준비        | 시연 시나리오 | AI 대전 시연     | 최종 테스트    |
 | **14주차** | **최종 발표 및 평가** |
-
-## ⚡ 주요 기능
-
-### 필수 기능
-
-- **🎯 완전한 포커 게임**: 프리플롭부터 리버까지 모든 라운드
-- **🤖 2단계 AI 시스템**: 규칙 기반 타이트/루즈 AI
-- **💰 완벽한 베팅 시스템**: Check, Call, Raise, Fold, All-in
-- **👥 2인 온라인 대전**: WebSocket 기반 실시간 대전 (계획)
-
-### AI 난이도별 특징
-
-#### Level 1: 타이트 플레이어 (Tight Strategy)
-
-- 프리미엄 핸드 위주로 플레이
-- 보수적 베팅 전략
-- 블러핑 최소화
-- 예측 가능한 패턴
-
-#### Level 2: 루즈 어그레시브 (Loose Strategy)
-
-- 넓은 범위의 핸드로 참여
-- 공격적 베팅 및 블러핑
-- 팟 오즈와 포지션을 적극 활용
-- 예측이 더 어려운 패턴
-
-#### Level 3: 적응형 AI (계획)
-
-- 상대 스타일 분석
-- 동적 전략 변경
-- 몬테카를로 시뮬레이션
-- 미니맥스 의사결정
-
-### 추가 기능 (계획)
-
-- **토너먼트 모드**: 여러 AI가 경쟁하는 라운드 로빈 방식
-- **통계 분석**: 승률, 수익률, 핸드별 성과 분석
-- **디버그 모드**: 카드 공개, AI 사고 과정 표시
-
-## 🗂️ 프로젝트 구조
-
-```
-03_poker_game/
-├── src/
-│   ├── __init__.py
-│   ├── main.py              # 메인 실행 파일
-│   ├── core/                # 핵심 게임 로직
-│   │   ├── __init__.py
-│   │   ├── card.py          # Card/Deck 클래스 (문현준)
-│   │   ├── player.py        # Player 클래스 (박성결)
-│   │   └── game.py          # PokerGame 클래스 (박성결)
-│   ├── ai/                  # AI 모듈
-│   │   ├── __init__.py
-│   │   ├── base_ai.py       # AI 인터페이스 (박종호)
-│   │   ├── rule_based_ai.py # 규칙 기반 AI (박종호)
-│   │   └── strategies.py    # AI 베팅 전략 (Tight, Loose) (박종호)
-│   ├── algorithms/          # 핵심 알고리즘
-│   │   ├── __init__.py
-│   │   ├── hand_evaluator.py # 족보 판정 (문현준)
-│   │   ├── monte_carlo.py    # 몬테카를로 (박우현)
-│   │   └── minimax.py        # 미니맥스 (박우현)
-│   └── web/                 # 웹 인터페이스 (계획)
-│       └── __init__.py
-├── tests/                   # 테스트 모듈
-│   ├── __init__.py
-│   ├── test_core.py         # 코어 모듈 테스트
-│   └── test_game_flow.py    # 게임 플로우 테스트
-├── requirements.txt         # Python 의존성
-├── setup.py                 # 패키지 설정
-└── README.md                # 프로젝트 문서
-```
-
-## 🔧 실행 방법
-
-```bash
-# 프로젝트 클론
-git clone https://github.com/ParkSeongGyeol/Texas-holdem.git
-cd Texas-holdem
-
-# 가상환경 생성 및 활성화
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# venv\Scripts\activate   # Windows
-
-# 의존성 설치 (개발용)
-pip install -e .[dev]
-
-# 게임 실행
-python src/main.py
-
-# 테스트 실행
-pytest tests/
-
-# 코드 스타일 검사
-black src/
-flake8 src/
-```
 
 ## 🤝 협업 방식
 

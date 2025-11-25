@@ -1,0 +1,7 @@
+stateDiagram-v2
+    [*] --> Preflop
+    Preflop --> Flop : Betting Complete
+    Flop --> Turn : Betting Complete
+    Turn --> River : Betting Complete
+    River --> Showdown : Betting Complete
+    Showdown --> [*] : Determine Winner

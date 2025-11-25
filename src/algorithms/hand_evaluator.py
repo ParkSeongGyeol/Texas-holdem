@@ -43,7 +43,7 @@ class HandEvaluator:
     @staticmethod
     def evaluate_hand(seven_cards: List[Card]) -> Tuple[HandRank, List[int], List[Card]]:
         """
-        7장의 카드 중 5장을 뽑아 만들 수 있는 최상의 조합을 찾습니다.
+        5장 이상 7장 이하의 카드 중 5장을 뽑아 만들 수 있는 최상의 조합을 찾습니다.
         
         Returns:
             (HandRank, Kickers, BestHandCards)
@@ -51,8 +51,8 @@ class HandEvaluator:
             - Kickers: 타이 브레이킹을 위한 키커 목록 (높은 숫자 우선)
             - BestHandCards: 최상의 족보를 구성하는 5장의 카드
         """
-        if len(seven_cards) != 7:
-            raise ValueError("7장의 카드가 필요합니다.")
+        if len(seven_cards) < 5 or len(seven_cards) > 7:
+            raise ValueError("5장 이상 7장 이하의 카드가 필요합니다.")
 
         best_hand_rank = HandRank.HIGH_CARD
         best_kickers = []
