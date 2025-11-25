@@ -1,15 +1,8 @@
-"""
-몬테카를로 시뮬레이션 - 박우현 담당
-승률 계산 및 병렬 처리
-"""
-
 import random
-from typing import List, Dict
+from typing import List, Tuple
 from concurrent.futures import ThreadPoolExecutor
-
-from src.core.card import Card, Deck
+from src.core.card import Card, Deck, Suit, Rank #카드 클래스가 import가 안됨.
 from src.algorithms.hand_evaluator import HandEvaluator
-
 
 class MonteCarloSimulator:
     """몬테카를로 시뮬레이션 클래스"""
@@ -18,7 +11,6 @@ class MonteCarloSimulator:
         self.num_simulations = num_simulations
         self.evaluator = HandEvaluator()
 
-
     def calculate_win_probability(
         self,
         hole_cards: List[Card],
@@ -26,58 +18,80 @@ class MonteCarloSimulator:
         num_opponents: int = 1
     ) -> float:
         """
-        승률 계산
-        Returns: 0.0~1.0 사이의 승률
+        승률 계산 (단일 스레드)
+        Returns: 0.0 ~ 1.0 사이의 승률
         """
-        # TODO: 몬테카를로 시뮬레이션 구현 (박우현)
-        # 1. 남은 카드로 가능한 시나리오 생성
-        # 2. 각 시나리오에서 승부 결과 계산
-        # 3. 승률 통계 산출
-
-        wins = 0
+        total_score = 0.0
+        
         for _ in range(self.num_simulations):
-            if self._simulate_hand(hole_cards, community_cards, num_opponents):
-                wins += 1
-
-        return wins / self.num_simulations
+            # 1.0(승), 0.5(무), 0.0(패) 점수를 바로 누적합니다.
+            total_score += self._simulate_hand(hole_cards, community_cards, num_opponents)
+        
+        return total_score / self.num_simulations
 
     def _simulate_hand(
         self,
         hole_cards: List[Card],
         community_cards: List[Card],
         num_opponents: int
-    ) -> bool:
-        """단일 핸드 시뮬레이션"""
+    ) -> float:
+        """
+        단일 핸드 시뮬레이션
+        Returns: 1.0 (Win), 0.5 (Tie), 0.0 (Lose)
+        """
         
-        # TODO: 단일 시뮬레이션 로직 구현 (박우현)
-        # 임시 구현: 랜덤 승부
-
-          # 덱 초기화 및 남은 카드 계산
         deck = Deck()
-        remaining_cards = [
-            c for c in deck.cards if c not in hole_cards + community_cards
-        ]
+        
+        # 이미 나와있는 카드(내 패 + 커뮤니티)를 덱에서 제거
+        # Deck 클래스의 self.cards 리스트를 활용하여 남은 카드를 필터링합니다.
+        known_cards = set(hole_cards + community_cards)
+        
+        # __eq__가 구현된 Card 클래스 덕분에 set과 list comprehension으로 필터링 가능
+        remaining_cards = [c for c in deck.cards if c not in known_cards]
         random.shuffle(remaining_cards)
 
-         # 상대방에게 홀카드 분배
-        opponents = []
+        # 상대방에게 홀카드 분배
+        opponents_hands = []
         for _ in range(num_opponents):
-            opponents.append([remaining_cards.pop(), remaining_cards.pop()])
+            if len(remaining_cards) < 2:
+                break
+            op_card1 = remaining_cards.pop()
+            op_card2 = remaining_cards.pop()
+            opponents_hands.append([op_card1, op_card2])
 
-         # 남은 커뮤니티 카드 보충
-        missing_count = 5 - len(community_cards)
-        full_community = community_cards + [remaining_cards.pop() for _ in range(missing_count)]
+        # 남은 커뮤니티 카드 보충 (총 5장이 되도록)
+        current_community = community_cards[:] 
+        missing_count = 5 - len(current_community)
+        
+        for _ in range(missing_count):
+            if remaining_cards:
+                current_community.append(remaining_cards.pop())
 
-         # 내 핸드 평가 
-        my_rank = self.evaluator.evaluate_hand(hole_cards + full_community)
+        # 내 핸드 평가
+        # evaluate_hand 반환값: (HandRank, Kickers, BestHandCards)
+        my_rank, my_kickers, _ = self.evaluator.evaluate_hand(hole_cards + current_community)
+        
+        # 비교를 위해 (족보 값, 키커 리스트) 튜플 생성
+        # HandRank Enum은 .value로 정수값 비교, Kickers는 리스트 자체로 사전순 비교 가능
+        my_score_key = (my_rank.value, my_kickers)
 
-         # 상대방 핸드 평가 및 비교 
-        for opp_cards in opponents:
-            opp_rank = self.evaluator.evaluate_hand(opp_cards + full_community)
-            if opp_rank > my_rank :
-                return False  # 상대가 더 강함
+        # 상대방 핸드 평가 및 승패 결정
+        is_tie = False
+        
+        for opp_hand in opponents_hands:
+            opp_rank, opp_kickers, _ = self.evaluator.evaluate_hand(opp_hand + current_community)
+            opp_score_key = (opp_rank.value, opp_kickers)
+            
+            # 파이썬 튜플 비교: 첫 번째 요소(족보) 비교 -> 같으면 두 번째 요소(키커) 비교
+            if opp_score_key > my_score_key:
+                return 0.0  # 상대방 승리 (패배)
+            elif opp_score_key == my_score_key:
+                is_tie = True # 동점 발생 (잠재적 무승부)
 
-        return True  # 내가 이김
+        if is_tie:
+            return 0.5 # 무승부
+        else:
+            return 1.0 # 승리
 
     def parallel_simulation(
         self,
@@ -87,24 +101,30 @@ class MonteCarloSimulator:
         num_threads: int = 4
     ) -> float:
         """병렬 처리를 통한 빠른 시뮬레이션"""
-        # TODO: 병렬 처리 몬테카를로 구현 (박우현)
+        
         simulations_per_thread = self.num_simulations // num_threads
+        remainder = self.num_simulations % num_threads
+
+        futures = []
+        total_score = 0.0
 
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
-            futures = []
-            for _ in range(num_threads):
+            for i in range(num_threads):
+                count = simulations_per_thread + (1 if i < remainder else 0)
+                
                 future = executor.submit(
                     self._run_simulations,
                     hole_cards,
                     community_cards,
                     num_opponents,
-                    simulations_per_thread
+                    count
                 )
                 futures.append(future)
 
-            total_wins = sum(future.result() for future in futures)
+            for future in futures:
+                total_score += future.result()
 
-        return total_wins / self.num_simulations
+        return total_score / self.num_simulations
 
     def _run_simulations(
         self,
@@ -112,31 +132,43 @@ class MonteCarloSimulator:
         community_cards: List[Card],
         num_opponents: int,
         num_sims: int
-    ) -> int:
-        """스레드별 시뮬레이션 실행"""
-        wins = 0
+    ) -> float:
+        """스레드 내부에서 실행되는 시뮬레이션 루프"""
+        local_score = 0.0
         for _ in range(num_sims):
-            if self._simulate_hand(hole_cards, community_cards, num_opponents):
-                wins += 1
-        return wins
-    
-
-
+            local_score += self._simulate_hand(hole_cards, community_cards, num_opponents)
+        return local_score
 
 if __name__ == "__main__":
+    # 테스트 실행 코드
     simulator = MonteCarloSimulator(num_simulations=1000)
+    
+    # 제공된 Card 클래스는 Card(Suit, Rank) 생성자를 사용합니다.
+    # 예시: 내 패 = A♠, K♠
+    my_hole_cards = [
+        Card(Suit.SPADES, Rank.ACE), 
+        Card(Suit.SPADES, Rank.KING)
+    ]
+    
+    # 커뮤니티 카드: Q♠, J♠, 2♦
+    current_community = [
+        Card(Suit.SPADES, Rank.QUEEN), 
+        Card(Suit.SPADES, Rank.JACK), 
+        Card(Suit.DIAMONDS, Rank.TWO)
+    ]
 
-    # 예시: 내 패 = A♠, K♠ / 커뮤니티 카드 3장
-    hole_cards = [Card('A', '♠'), Card('K', '♠')]
-    community_cards = [Card('Q', '♠'), Card('J', '♠'), Card('2', '♦')]
-
+    print(f"--- 시뮬레이션 시작 (횟수: {simulator.num_simulations}) ---")
+    print(f"내 패: {my_hole_cards}")
+    print(f"커뮤니티: {current_community}")
+    
+    # 1. 단일 스레드 실행
     win_rate_single = simulator.calculate_win_probability(
-        hole_cards, community_cards, num_opponents=2
+        my_hole_cards, current_community, num_opponents=1
     )
+    print(f"단일 스레드 승률 (Equity): {win_rate_single:.2%}")
 
+    # 2. 병렬 스레드 실행
     win_rate_parallel = simulator.parallel_simulation(
-        hole_cards, community_cards, num_opponents=2, num_threads=4
+        my_hole_cards, current_community, num_opponents=1, num_threads=4
     )
-
-    print(f"단일 스레드 승률: {win_rate_single:.2%}")
-    print(f"병렬 스레드 승률: {win_rate_parallel:.2%}")
+    print(f"병렬 스레드 승률 (Equity): {win_rate_parallel:.2%}")
