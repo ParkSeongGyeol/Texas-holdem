@@ -87,6 +87,55 @@ pytest tests/
 # 코드 스타일 검사
 black src/
 flake8 src/
+
+## 🏗️ 코드 구조 및 흐름 (Code Structure & Flow)
+
+프로젝트의 전체적인 구조와 흐름을 이해하기 위한 시각적 자료입니다.
+
+### 프로젝트 구조도 (Project Architecture)
+
+프로젝트의 전체적인 구조와 데이터 흐름을 보여주는 아키텍처 다이어그램입니다.
+```
+
+```mermaid
+graph TD
+    User[User / Client] --> Main[Main Entry (main.py)]
+    
+    subgraph "Core System"
+        Main --> Game[PokerGame]
+        Game --> Player[Player]
+        Game --> Deck[Deck]
+        Player --> Card[Card]
+    end
+    
+    subgraph "Algorithms"
+        Player --> HandEval[Hand Evaluator]
+        AI --> MonteCarlo[Monte Carlo Sim]
+        AI --> Minimax[Minimax]
+    end
+    
+    subgraph "AI System"
+        Player <|-- AI[AI Player]
+        AI --> Strategy[Betting Strategies]
+    end
+    
+    subgraph "Web Interface (Planned)"
+        User --> API[FastAPI Server]
+        API --> Game
+    end
+```
+
+### 게임 진행 흐름도 (Game Flow Diagram)
+
+게임은 프리플롭에서 시작하여 쇼다운까지 단계별로 진행됩니다. 각 단계 사이에는 베팅 라운드가 존재합니다.
+
+![Game Flow Diagram](docs/images/game_flow.png)
+
+## 🚀 다음 단계 및 코드 읽기 가이드 (Next Steps)
+
+현재 `Player` 클래스와 `HandEvaluator`가 연결되어, 플레이어가 자신의 핸드 강도를 계산할 수 있게 되었습니다.
+
+### 1. 연결 고리 이해하기
 - **`src/core/player.py`**: `get_hand_strength(community_cards)` 메서드는 `HandEvaluator`를 호출하여 0.0 ~ 1.0 사이의 점수를 반환합니다.
 - **`src/algorithms/hand_evaluator.py`**: 5~7장의 카드를 받아 최적의 족보를 판정합니다.
 
