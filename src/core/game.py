@@ -8,6 +8,7 @@ from enum import Enum
 
 from src.core.card import Deck, Card
 from src.core.player import Player
+from src.algorithms.hand_evaluator import HandEvaluator, HandRank
 
 
 class GamePhase(Enum):
@@ -427,19 +428,38 @@ class PokerGame:
     def determine_winner(self) -> List[Player]:
         """
         승자 결정
-
-        Week 7: 핸드 평가 및 승자 판정 (임시 구현)
-        Note: 실제 핸드 평가는 문현준의 HandEvaluator 사용
+        
+        Week 7: 핸드 평가 및 승자 판정
         """
         active_players = self.get_active_players()
 
         if len(active_players) == 1:
             return active_players
 
-        # TODO: 실제 핸드 평가 로직 (문현준의 HandEvaluator 사용)
-        # 임시로 첫 번째 플레이어를 승자로 반환
-        print("\n[임시] 핸드 평가 로직 미구현 - 첫 번째 활성 플레이어를 승자로 지정")
-        return [active_players[0]]
+        # 모든 활성 플레이어의 핸드 평가
+        player_hands = []
+        for player in active_players:
+            # 홀 카드와 커뮤니티 카드 결합
+            full_hand = player.hand + self.community_cards
+            rank, kickers, best_cards = HandEvaluator.evaluate_hand(full_hand)
+            player_hands.append({
+                'player': player,
+                'rank': rank,
+                'kickers': kickers,
+                'best_cards': best_cards,
+                'score_key': (rank.value, kickers)
+            })
+            
+            # 핸드 결과 로깅
+            self.log_action(f"{player.name}: {rank.korean_name} ({', '.join(str(c) for c in best_cards)})")
+
+        # 최고의 점수 키 찾기
+        best_score_key = max(p['score_key'] for p in player_hands)
+        
+        # 최고의 점수 키를 가진 모든 플레이어 찾기 (동점자 처리)
+        winners = [p['player'] for p in player_hands if p['score_key'] == best_score_key]
+        
+        return winners
 
     def distribute_pot(self, winners: List[Player]) -> None:
         """
