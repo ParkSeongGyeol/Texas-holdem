@@ -188,22 +188,54 @@ class Player:
         """플레이어 객체 표현 (디버깅용)"""
         return f"Player(name={self.name}, chips={self.chips}, state={self.get_state()})"
 
-    # Week 4: 추가 핸드 관리 기능
+    # 추가 핸드 관리 기능
 
-    def get_hand_strength(self) -> float:
+    def get_hand_strength(self, community_cards: List[Card]) -> float:
         """
-        핸드 강도 평가 (임시 구현)
+        핸드 강도 평가
+
+        Args:
+            community_cards: 커뮤니티 카드 목록
 
         Returns:
             0.0 ~ 1.0 사이의 핸드 강도 (높을수록 강함)
-
-        Note:
-            실제 구현은 문현준의 HandEvaluator를 사용해야 함
         """
-        # TODO: 실제 핸드 평가 로직 구현 (문현준의 HandEvaluator 사용)
-        # 임시로 랜덤 값 반환
-        import random
-        return random.random()
+        # 실제 핸드 평가 로직 구현
+        from src.algorithms.hand_evaluator import HandEvaluator, HandRank
+
+        if not community_cards:
+            # 프리플롭 단계에서는 핸드 강도를 정확히 계산하기 어려움
+            return 0.0
+        
+        all_cards = self.hand + community_cards
+        if len(all_cards) < 5:
+             return 0.0
+
+        try:
+            best_rank, kickers, _ = HandEvaluator.evaluate_hand(all_cards)
+            
+            # 점수 정규화 (0.0 ~ 1.0)
+            # HandRank: 1 ~ 10
+            # Kickers: 각 2 ~ 14 (Ace)
+            
+            # 기본 점수: 족보 순위 (100점 만점 기준 10점 단위 등)
+            base_score = best_rank.value * 1000000
+            
+            # 키커 점수 추가
+            kicker_score = 0
+            for i, kicker in enumerate(kickers):
+                kicker_score += kicker * (15 ** (4 - i))
+                
+            total_score = base_score + kicker_score
+            
+            # 최대 가능한 점수 (로열 플러시)로 나누어 정규화
+            max_score = HandRank.ROYAL_FLUSH.value * 1000000 + (15**5)
+            
+            return min(total_score / max_score, 1.0)
+            
+        except Exception as e:
+            print(f"핸드 평가 중 오류 발생: {e}")
+            return 0.0
 
     def get_hand_description(self) -> str:
         """

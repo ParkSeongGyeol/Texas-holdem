@@ -48,24 +48,30 @@ class PokerGame:
         Args:
             small_blind: 스몰 블라인드 금액 (기본값: 10)
             big_blind: 빅 블라인드 금액 (기본값: 20)
-        """
-        self.deck = Deck()
-        self.players: List[Player] = []
-        self.community_cards: List[Card] = []
-        self.pot = 0
-        self.side_pots: List[Dict] = []  # Week 6: 사이드 팟
-        self.current_phase = GamePhase.PREFLOP
-        self.dealer_position = 0
-        self.current_bet = 0
-        self.small_blind = small_blind
-        self.big_blind = big_blind
-        self.current_player_index = 0
-        self.last_raiser_index = -1
-        self.min_raise = big_blind
 
-        # Week 7: 디버그 모드
-        self.debug_mode = False
-        self.action_history: List[str] = []
+        """
+        # 게임 상태 관련
+        self.deck = Deck()                      # 메인 공유 덱
+        self.players: List[Player] = []         # 플레이어 목록
+        self.community_cards: List[Card] = []   # 커뮤니티 카드
+        self.pot = 0                            # 총 팟
+        self.side_pots: List[Dict] = []         # 사이드 팟(특정 상황 시)
+        self.current_phase = GamePhase.PREFLOP  # 현재 페이즈
+        self.dealer_position = 0                # 데일러 위치
+
+        # 베팅 관련
+        self.current_bet = 0                    # 현재 베팅
+        self.small_blind = small_blind          # 스몰 블라인드
+        self.big_blind = big_blind              # 빅 블라인드
+        self.current_player_index = 0           # 현재 플레이어 인덱스
+
+        # 턴 진행 관련
+        self.last_raiser_index = -1             # 마지막 레이저 플레이어 인덱스
+        self.min_raise = big_blind              # 최소 레이즈
+
+        # 디버그 모드
+        self.debug_mode = False                 # 디버그 모드 활성화 여부
+        self.action_history: List[str] = []     # 게임 진행 중 발생한 액션 기록
 
     def add_player(self, name: str, chips: int = 1000) -> None:
         """플레이어 추가"""
@@ -83,7 +89,7 @@ class PokerGame:
 
     def new_hand(self) -> None:
         """새 핸드 시작"""
-        # TODO: 게임 초기화 로직 구현 (박성결)
+        # 게임 초기화 로직
         self.deck.reset()
         self.deck.shuffle()
         self.community_cards = []
@@ -108,7 +114,7 @@ class PokerGame:
 
     def deal_flop(self) -> None:
         """플롭 딜링 (3장)"""
-        # TODO: 번 카드 처리 및 플롭 딜링 (박성결)
+        # 번 카드 처리 및 플롭 딜링
         self.deck.deal()  # Burn card
         for _ in range(3):
             self.community_cards.append(self.deck.deal())
@@ -116,14 +122,14 @@ class PokerGame:
 
     def deal_turn(self) -> None:
         """턴 딜링 (1장)"""
-        # TODO: 번 카드 처리 및 턴 딜링 (박성결)
+        # 번 카드 처리 및 턴 딜링
         self.deck.deal()  # Burn card
         self.community_cards.append(self.deck.deal())
         self.current_phase = GamePhase.TURN
 
     def deal_river(self) -> None:
         """리버 딜링 (1장)"""
-        # TODO: 번 카드 처리 및 리버 딜링 (박성결)
+        # 번 카드 처리 및 리버 딜링
         self.deck.deal()  # Burn card
         self.community_cards.append(self.deck.deal())
         self.current_phase = GamePhase.RIVER
@@ -146,7 +152,7 @@ class PokerGame:
             print(f"  {player}{dealer_marker}{current_marker}")
         print("------------------\n")
 
-    # ===== Week 3: 턴 관리 시스템 =====
+    # ===== 턴 관리 시스템 =====
 
     def get_active_players(self) -> List[Player]:
         """활성 플레이어 목록 반환 (폴드하지 않은 플레이어)"""
@@ -195,7 +201,7 @@ class PokerGame:
 
         return True
 
-    # ===== Week 5: 베팅 라운드 구현 =====
+    # ===== 베팅 라운드 구현 =====
 
     def post_blinds(self) -> None:
         """블라인드 배팅"""
@@ -227,7 +233,7 @@ class PokerGame:
         """
         베팅 라운드 진행
 
-        Week 5: 체크/콜/레이즈/폴드 로직
+        체크/콜/레이즈/폴드 로직
         """
         if len(self.get_active_players()) <= 1:
             return
@@ -324,13 +330,13 @@ class PokerGame:
 
         return actions
 
-    # ===== Week 6: 액션 처리 및 사이드 팟 =====
+    # ===== 액션 처리 및 사이드 팟 =====
 
     def process_action(self, player: Player, action: Action, amount: int) -> None:
         """
         플레이어 액션 처리
 
-        Week 6: 베팅 액션 처리, 올인 상황 처리
+        베팅 액션 처리, 올인 상황 처리
         """
         if action == Action.FOLD:
             player.fold()
@@ -388,7 +394,7 @@ class PokerGame:
         """
         사이드 팟 계산
 
-        Week 6: 올인 상황에서 사이드 팟 처리
+        올인 상황에서 사이드 팟 처리
         """
         self.side_pots = []
 
@@ -423,13 +429,13 @@ class PokerGame:
         if self.debug_mode and self.side_pots:
             print(f"\n사이드 팟 계산 완료: {len(self.side_pots)}개의 팟")
 
-    # ===== Week 7: 승자 결정 및 팟 분배 =====
+    # ===== 승자 결정 및 팟 분배 =====
 
     def determine_winner(self) -> List[Player]:
         """
         승자 결정
         
-        Week 7: 핸드 평가 및 승자 판정
+        핸드 평가 및 승자 판정
         """
         active_players = self.get_active_players()
 
@@ -465,7 +471,7 @@ class PokerGame:
         """
         팟 분배
 
-        Week 7: 승자에게 팟 분배 (사이드 팟 포함)
+        승자에게 팟 분배 (사이드 팟 포함)
         """
         if not winners:
             return
@@ -501,7 +507,7 @@ class PokerGame:
         """
         쇼다운 진행
 
-        Week 7: 최종 승자 결정 및 팟 분배
+        최종 승자 결정 및 팟 분배
         """
         self.current_phase = GamePhase.SHOWDOWN
         self.log_action("\n========== 쇼다운 ==========")
@@ -530,7 +536,7 @@ class PokerGame:
         """
         다음 게임 단계로 진행
 
-        Week 3: FSM 상태 전이
+        FSM 상태 전이
         """
         if self.current_phase == GamePhase.PREFLOP:
             self.deal_flop()
@@ -553,7 +559,7 @@ class PokerGame:
         elif self.current_phase == GamePhase.RIVER:
             self.showdown()
 
-    # ===== Week 7: 디버그 기능 =====
+    # ===== 디버그 기능 =====
 
     def enable_debug_mode(self) -> None:
         """디버그 모드 활성화"""
@@ -569,7 +575,7 @@ class PokerGame:
         """
         액션 로깅
 
-        Week 7: 게임 진행 상황 추적
+        게임 진행 상황 추적
         """
         self.action_history.append(message)
         if self.debug_mode or True:  # 항상 출력
@@ -586,7 +592,7 @@ class PokerGame:
         """
         게임 통계 반환
 
-        Week 7: 게임 상태 디버깅
+        게임 상태 디버깅
         """
         return {
             'phase': self.current_phase.value,
@@ -602,7 +608,7 @@ class PokerGame:
         """
         한 핸드를 완전히 진행
 
-        Week 7: 전체 게임 플로우 테스트
+        전체 게임 플로우 테스트
         """
         self.new_hand()
 
