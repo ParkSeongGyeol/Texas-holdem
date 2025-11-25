@@ -1,5 +1,10 @@
 # main.py
 
+#pip install fastapi 
+#pip install "uvicorn[standard]"
+#uvicorn src.web.main:app --reload
+
+
 import random
 from fastapi.responses import FileResponse
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
