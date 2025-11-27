@@ -1,7 +1,7 @@
 import random
 from typing import List, Tuple
 from concurrent.futures import ThreadPoolExecutor
-from src.core.card import Card, Deck, Suit, Rank #카드 클래스가 import가 안됨.
+from src.core.card import Card, Deck, Suit, Rank 
 from src.algorithms.hand_evaluator import HandEvaluator
 
 class MonteCarloSimulator:
@@ -53,7 +53,7 @@ class MonteCarloSimulator:
         # 상대방에게 홀카드 분배
         opponents_hands = []
         for _ in range(num_opponents):
-            if len(remaining_cards) < 2:
+            if len(remaining_cards) < 2: # 남은 카드가 부족하면 중단(안전장치)
                 break
             op_card1 = remaining_cards.pop()
             op_card2 = remaining_cards.pop()
@@ -61,11 +61,11 @@ class MonteCarloSimulator:
 
         # 남은 커뮤니티 카드 보충 (총 5장이 되도록)
         current_community = community_cards[:] 
-        missing_count = 5 - len(current_community)
+        missing_count = 5 - len(current_community) 
         
         for _ in range(missing_count):
             if remaining_cards:
-                current_community.append(remaining_cards.pop())
+                current_community.append(remaining_cards.pop()) 
 
         # 내 핸드 평가
         # evaluate_hand 반환값: (HandRank, Kickers, BestHandCards)
@@ -76,11 +76,11 @@ class MonteCarloSimulator:
         my_score_key = (my_rank.value, my_kickers)
 
         # 상대방 핸드 평가 및 승패 결정
-        is_tie = False
+        is_tie = False 
         
-        for opp_hand in opponents_hands:
-            opp_rank, opp_kickers, _ = self.evaluator.evaluate_hand(opp_hand + current_community)
-            opp_score_key = (opp_rank.value, opp_kickers)
+        for opp_hand in opponents_hands: 
+            opp_rank, opp_kickers, _ = self.evaluator.evaluate_hand(opp_hand + current_community) 
+            opp_score_key = (opp_rank.value, opp_kickers) 
             
             # 파이썬 튜플 비교: 첫 번째 요소(족보) 비교 -> 같으면 두 번째 요소(키커) 비교
             if opp_score_key > my_score_key:
@@ -112,8 +112,8 @@ class MonteCarloSimulator:
             for i in range(num_threads):
                 count = simulations_per_thread + (1 if i < remainder else 0)
                 
-                future = executor.submit(
-                    self._run_simulations,
+                future = executor.submit(  
+                    self._run_simulations, 
                     hole_cards,
                     community_cards,
                     num_opponents,
