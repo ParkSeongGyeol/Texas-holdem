@@ -11,7 +11,25 @@ Week 3-7 구현 내용 (박성결):
 - Week 7: 승자 결정, 게임 플로우 테스트, 디버그 기능
 """
 
-from src.core.game import PokerGame
+from typing import Dict
+from types import MethodType
+from src.core.game import PokerGame, Action as GameAction   # ★ Action 같이 import
+from src.core.player import Player                          # === AI 추가 ===
+from src.ai.base_ai import Action as AIAction, Position     # === AI 추가 ===
+from src.ai.rule_based_ai import RuleBasedAI                # === AI 추가 ===
+
+try:  # 구현 안돼 있으면 그냥 무시되게
+    from src.ai.rule_based_ai import AdaptiveRuleBasedAI
+except ImportError:
+    AdaptiveRuleBasedAI = None
+
+AI_TO_GAME_ACTION = {
+    AIAction.FOLD: GameAction.FOLD,
+    AIAction.CHECK: GameAction.CHECK,
+    AIAction.CALL: GameAction.CALL,
+    AIAction.RAISE: GameAction.RAISE,
+    AIAction.ALL_IN: GameAction.ALL_IN,
+}
 
 
 def demo_game():
@@ -178,6 +196,137 @@ def test_mode():
     print("모든 테스트가 완료되었습니다!")
     print("=" * 60)
 
+def attach_ai_controller(game: PokerGame, ai_controllers: Dict[str, object]) -> None:
+    original_get_player_action = game.get_player_action
+
+    
+    def get_player_action_with_ai(self: PokerGame, player: Player):
+    # ---- 사람이면 input() 사용 ----
+        if player.name not in ai_controllers:
+
+        # 🔥 디버그: Player 턴이 왜 안뜨는지 확인
+            print("\n===== DEBUG (HUMAN TURN) =====")
+            print("PLAYER NAME:", player.name)
+            print("self.current_bet:", self.current_bet)
+            print("player.current_bet:", player.current_bet)
+            print("difference(to_call):", self.current_bet - player.current_bet)
+            print("===============================\n")
+
+            return original_get_player_action(player)
+
+    # ---- AI 턴 ----
+        ai = ai_controllers[player.name]
+
+        ai.receive_hole_cards(player.hand)
+
+        community_cards = self.community_cards
+        pot = self.pot
+        to_call = self.current_bet - player.current_bet
+
+        # 🔥 디버그용 출력 (AI 턴)
+        print("\n===== DEBUG (AI TURN) =====")
+        print("AI:", player.name)
+        print("self.current_bet:", self.current_bet)
+        print("player.current_bet:", player.current_bet)
+        print("to_call:", to_call)
+        print("pot:", pot)
+        print("community:", [str(c) for c in community_cards])
+        print("============================\n")
+
+        opponents = [
+            other_ai for name, other_ai in ai_controllers.items()
+            if name != player.name
+        ]
+
+        # AI action
+        ai_action, ai_amount = ai.act(
+            community_cards=community_cards,
+            pot=pot,
+            current_bet=to_call,  # ★ 이거 하나만 넣어야 함
+            opponents=opponents,
+        )   
+
+        game_action = AI_TO_GAME_ACTION[ai_action]
+
+        if game_action == GameAction.CALL and to_call == 0:
+            game_action = GameAction.CHECK
+
+        amount = ai_amount if game_action == GameAction.RAISE else 0
+
+        print(f"[AI] {player.name}: {game_action.value}, amount={amount}")
+        return game_action, amount
+
+
+    game.get_player_action = MethodType(get_player_action_with_ai, game)
+
+def ai_mode():
+    """
+    사람 vs AI / 적응형 AI 모드
+    - 사람 1명 + AI 1명 구성
+    """
+    print("\n" + "=" * 60)
+    print("🤖 사람 vs AI 모드")
+    print("=" * 60)
+
+    # AI 단계 선택
+    print("\nAI 전략 단계를 선택하세요:")
+    print("  1. 1단계 – 루즈 AI (LooseStrategy)")
+    print("  2. 2단계 – 타이트 AI (TightStrategy)")
+    if AdaptiveRuleBasedAI is not None:
+        print("  3. 3단계 – 적응형 AI (상대 패턴에 따라 루즈↔타이트 전환)")
+    choice = input("선택 (1-3, 기본: 2): ").strip() or "2"
+
+    # 게임 생성
+    game = PokerGame(small_blind=10, big_blind=20)
+
+    # 사람 + AI 플레이어 이름
+    human_name = "Player"
+    ai_name = "AI_1"
+
+    # 플레이어 추가
+    game.add_player(human_name, 1000)
+    game.add_player(ai_name, 1000)
+
+    # AI 인스턴스 생성
+    if choice == "1":
+        strategy_type = "loose"
+        ai = RuleBasedAI(name=ai_name, position=Position.BB, strategy_type=strategy_type)
+        print("\n[AI 설정] 1단계 루즈 AI 사용")
+    elif choice == "3" and AdaptiveRuleBasedAI is not None:
+        ai = AdaptiveRuleBasedAI(name=ai_name, position=Position.BB, base_mode="tight")
+        print("\n[AI 설정] 3단계 적응형 AI 사용 (기본 타이트 → 상황에 따라 전환)")
+    else:
+        strategy_type = "tight"
+        ai = RuleBasedAI(name=ai_name, position=Position.BB, strategy_type=strategy_type)
+        print("\n[AI 설정] 2단계 타이트 AI 사용")
+
+    ai_controllers: Dict[str, object] = {ai_name: ai}
+
+    # 게임에 AI 컨트롤러 연결
+    attach_ai_controller(game, ai_controllers)
+
+    print("\n사람 vs AI 게임을 시작합니다!")
+    print("사람 플레이어 이름:", human_name)
+    print("AI 플레이어 이름:", ai_name)
+    print("=" * 60)
+
+    # 한 핸드씩 계속 진행
+    try:
+        while True:
+            game.play_full_hand()
+
+            again = input("\n다음 핸드를 계속 진행할까요? (y/n): ").strip().lower()
+            if again != "y":
+                break
+
+        print("\n사람 vs AI 모드를 종료합니다.")
+
+    except KeyboardInterrupt:
+        print("\n\n게임이 중단되었습니다.")
+    except Exception as e:
+        print(f"\n오류가 발생했습니다: {e}")
+        import traceback
+        traceback.print_exc()
 
 def main():
     """메인 함수 - 모드 선택"""
@@ -192,10 +341,11 @@ def main():
     print("  1. 인터랙티브 모드 (실제 게임 플레이)")
     print("  2. 테스트 모드 (자동화된 기능 검증)")
     print("  3. 데모 모드 (게임 객체 생성만)")
-    print("  4. 종료")
+    print("  4. 사람 vs AI 모드")
+    print("  5. 종료")
 
     try:
-        choice = input("\n선택 (1-4): ").strip()
+        choice = input("\n선택 (1-5): ").strip()
 
         if choice == "1":
             interactive_mode()
@@ -205,6 +355,8 @@ def main():
             demo_game()
             print("\n데모 게임이 생성되었습니다.")
         elif choice == "4":
+            ai_mode()
+        elif choice == "5":
             print("\n게임을 종료합니다. 안녕히 가세요!")
         else:
             print("\n올바른 선택이 아닙니다.")
