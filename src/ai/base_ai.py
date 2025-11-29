@@ -1,61 +1,88 @@
-"""
-AI 인터페이스 - 박종호 담당
-AI 기본 인터페이스 및 의사결정 시스템
-"""
+# src/ai/base_ai.py
 
-#difficulty_level = AI 난이도 설정
-#community_cards = 테이블에 깔린 카드 
-#current_bet = 내가 배팅하려면 필요한 금액
-
-from abc import ABC, abstractmethod
 from typing import List, Tuple
+from abc import ABC, abstractmethod
 from enum import Enum
 
-class Position(Enum):
-    SB  = "sb"
-    BB  = "bb"
+from src.core.card import Card
+from src.algorithms.hand_evaluator import HandEvaluator
 
-class Action(Enum): #플레이어 액션
+class Position(Enum):
+    SB = "sb"
+    BB = "bb"
+
+
+class Action(Enum):
     FOLD = "fold"
     CHECK = "check"
     CALL = "call"
     RAISE = "raise"
     ALL_IN = "all_in"
 
-class AIPlayer(ABC): #AI 인터페이스
-    def __init__(self, name: str, chips: int = 1000, difficulty_level: int = 1, strategy = None):
-        self.name = name
-        self.chips = chips
-        self.difficulty_level = difficulty_level
-        self.strategy = strategy
-        self.hole_cards: List[str] = []
-        self.opponent_patterns = {}  # 상대 패턴 분석 데이터
-        self.position: Position = Position.SB
 
-    @abstractmethod #(액션, 금액) 
-    def make_decision( 
+class AIPlayer(ABC):
+
+    def __init__(self, name: str, position: Position, strategy):
+        self.name = name
+        self.position = position
+        self.strategy = strategy
+
+        self.hole_cards: List[Card] = []
+
+        self.opponent_patterns = {}
+
+    def card_to_code(self, card: Card) -> str:
+        r = card.rank.symbol
+        if r == "10":
+            r = "T"
+        return r + card.suit.value
+
+    def to_codes(self, cards: List[Card]) -> List[str]:
+        return [self.card_to_code(c) for c in cards]
+
+  
+    def hand_strength(self, hole_cards: List[Card], board_cards: List[Card]) -> float:
+        """
+        문자열 기반 evaluator / Card 기반 evaluator 양쪽에 대응 가능
+        지금은 Card evaluator 점수 정규화 사용
+        """
+
+        try:
+            seven = hole_cards + board_cards  # List[Card]
+
+            rank, kickers, _ = HandEvaluator.evaluate_hand(seven)
+
+            # Rank normalization (1~10 → 0~1)
+            rank_score = (rank.value - 1) / 9
+
+            kicker_score = 0.0
+            if kickers:
+                kicker_score = sum(k / 14 for k in kickers) / len(kickers)
+
+            strength = rank_score * 0.8 + kicker_score * 0.2
+            return max(0.0, min(1.0, strength))
+
+        except:
+            return 0.0
+
+
+    def make_decision(
         self,
-        community_cards: List[str],
+        community_cards: List[Card],
         pot: int,
         current_bet: int,
-        opponents: List 
-    ) -> Tuple[Action, int]:  
-        pass
+        opponents: List["AIPlayer"]
+    ) -> Tuple[Action, int]:
 
-    @abstractmethod  #강도 0.0~1.0
-    def analyze_hand_strength(
-        self,
-        hole_cards: List[str],
-        community_cards: List[str]
-    ) -> float:
-        pass
+        return self.strategy.decide(
+            self,
+            community_cards,
+            pot,
+            current_bet,
+            opponents
+        )
 
-    def update_opponent_pattern(self, opponent , action: Action, amount: int) -> None:    
-        if opponent.name not in self.opponent_patterns:
-            self.opponent_patterns[opponent.name] = []
-
-        self.opponent_patterns[opponent.name].append({
-            'action': action,
-            'amount': amount,
-            'pot': 0 
-        })
+    def record_opponent_action(self, name: str, action: Action):
+        if name not in self.opponent_patterns:
+            self.opponent_patterns[name] = []
+        self.opponent_patterns[name].append(action)
