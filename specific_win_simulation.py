@@ -7,13 +7,13 @@ from src.algorithms.monte_carlo import MonteCarloSimulator
 # =========================================================
 # 1. 사용자 설정 구간 (여기만 바꾸면 됩니다!)
 # =========================================================
-TARGET_PHASE = "River"       # "Flop" (3장), "Turn" (4장), "River" (5장)
-TARGET_RANK_NAME = "STRAIGHT_FLUSH"  # 찾고 싶은 족보 이름 (대문자)
+TARGET_PHASE = "Flop"       # "Flop" (3장), "Turn" (4장), "River" (5장)
+TARGET_RANK_NAME = "TWO_PAIR"  # 찾고 싶은 족보 이름 (대문자)
                             # 예: "HIGH_CARD", "ONE_PAIR", "TWO_PAIR", "THREE_OF_A_KIND",
                             #     "STRAIGHT", "FLUSH", "FULL_HOUSE", "FOUR_OF_A_KIND", "STRAIGHT_FLUSH"
 
-NUM_TEST_CASES = 10         # 해당 조건의 상황을 몇 번이나 만들어서 테스트할지
-MC_SIMULATIONS = 5000       # 각 상황마다 돌릴 몬테카를로 시뮬레이션 횟수
+NUM_TEST_CASES = 300       # 해당 조건의 상황을 몇 번이나 만들어서 테스트할지
+MC_SIMULATIONS = 20000       # 각 상황마다 돌릴 몬테카를로 시뮬레이션 횟수
 # =========================================================
 
 
@@ -123,4 +123,19 @@ def run_targeted_analysis():
         print("데이터를 생성하지 못했습니다.")
 
 if __name__ == "__main__":
+    
+    
+    
+    run_targeted_analysis()
+
+      
+    TARGET_PHASE = "Turn"     
+   
+
+    run_targeted_analysis()
+
+ 
+    TARGET_PHASE = "River"       
+   
+
     run_targeted_analysis()
