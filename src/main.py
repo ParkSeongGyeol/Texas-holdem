@@ -197,136 +197,119 @@ def test_mode():
     print("=" * 60)
 
 def attach_ai_controller(game: PokerGame, ai_controllers: Dict[str, object]) -> None:
+    """game.get_player_action을 갈아끼워서, AI 이름일 때는 AI가 알아서 결정하게 만드는 래퍼"""
+
     original_get_player_action = game.get_player_action
 
-    
     def get_player_action_with_ai(self: PokerGame, player: Player):
-    # ---- 사람이면 input() 사용 ----
+        # 👉 사람이면 원래 입력 로직 그대로 사용
         if player.name not in ai_controllers:
-
-        # 🔥 디버그: Player 턴이 왜 안뜨는지 확인
-            print("\n===== DEBUG (HUMAN TURN) =====")
-            print("PLAYER NAME:", player.name)
-            print("self.current_bet:", self.current_bet)
-            print("player.current_bet:", player.current_bet)
-            print("difference(to_call):", self.current_bet - player.current_bet)
-            print("===============================\n")
-
             return original_get_player_action(player)
 
-    # ---- AI 턴 ----
+        # 👉 여기서부터는 AI 턴
         ai = ai_controllers[player.name]
 
+        # AI에게 홀카드 전달
         ai.receive_hole_cards(player.hand)
 
         community_cards = self.community_cards
         pot = self.pot
         to_call = self.current_bet - player.current_bet
 
-        # 🔥 디버그용 출력 (AI 턴)
-        print("\n===== DEBUG (AI TURN) =====")
-        print("AI:", player.name)
-        print("self.current_bet:", self.current_bet)
-        print("player.current_bet:", player.current_bet)
-        print("to_call:", to_call)
-        print("pot:", pot)
-        print("community:", [str(c) for c in community_cards])
-        print("============================\n")
+        # opponents는 일단 비워둬도 됨 (지금 전략에서 안씀)
+        opponents = []
 
-        opponents = [
-            other_ai for name, other_ai in ai_controllers.items()
-            if name != player.name
-        ]
-
-        # AI action
+        # RuleBasedAI / AdaptiveRuleBasedAI 둘 다 act(...) 있음
         ai_action, ai_amount = ai.act(
             community_cards=community_cards,
             pot=pot,
-            current_bet=to_call,  # ★ 이거 하나만 넣어야 함
+            current_bet=to_call,
             opponents=opponents,
-        )   
+        )
 
         game_action = AI_TO_GAME_ACTION[ai_action]
 
+        # 콜인데 to_call이 0이면 → 체크로 바꿔주기
         if game_action == GameAction.CALL and to_call == 0:
             game_action = GameAction.CHECK
 
+        # 레이즈일 때만 금액 전달, 나머지는 0
         amount = ai_amount if game_action == GameAction.RAISE else 0
 
         print(f"[AI] {player.name}: {game_action.value}, amount={amount}")
+
         return game_action, amount
 
-
+    # game.get_player_action 메서드를 교체
     game.get_player_action = MethodType(get_player_action_with_ai, game)
 
 def ai_mode():
     """
     사람 vs AI / 적응형 AI 모드
-    - 사람 1명 + AI 1명 구성
+    - 사람 1명 + AI 1명
+    - 1번 인터랙티브 모드와 똑같이 play_full_hand()로 진행
+      (game.py는 전혀 수정 안 함)
     """
     print("\n" + "=" * 60)
     print("🤖 사람 vs AI 모드")
     print("=" * 60)
 
-    # AI 단계 선택
-    print("\nAI 전략 단계를 선택하세요:")
-    print("  1. 1단계 – 루즈 AI (LooseStrategy)")
-    print("  2. 2단계 – 타이트 AI (TightStrategy)")
+    # ── AI 종류 선택 ─────────────────────────────
+    print("AI 종류를 선택하세요:")
+    print("  1. 루즈 AI")
+    print("  2. 타이트 AI")
     if AdaptiveRuleBasedAI is not None:
-        print("  3. 3단계 – 적응형 AI (상대 패턴에 따라 루즈↔타이트 전환)")
+        print("  3. 적응형 AI")
     choice = input("선택 (1-3, 기본: 2): ").strip() or "2"
 
-    # 게임 생성
+    # ── 게임 생성 ───────────────────────────────
     game = PokerGame(small_blind=10, big_blind=20)
 
-    # 사람 + AI 플레이어 이름
     human_name = "Player"
     ai_name = "AI_1"
 
-    # 플레이어 추가
+    # 사람 + AI 플레이어 추가
     game.add_player(human_name, 1000)
     game.add_player(ai_name, 1000)
 
-    # AI 인스턴스 생성
+    # ── AI 인스턴스 생성 ─────────────────────────
     if choice == "1":
-        strategy_type = "loose"
-        ai = RuleBasedAI(name=ai_name, position=Position.BB, strategy_type=strategy_type)
+        ai = RuleBasedAI(name=ai_name, position=Position.BB, strategy_type="loose")
         print("\n[AI 설정] 1단계 루즈 AI 사용")
     elif choice == "3" and AdaptiveRuleBasedAI is not None:
         ai = AdaptiveRuleBasedAI(name=ai_name, position=Position.BB, base_mode="tight")
         print("\n[AI 설정] 3단계 적응형 AI 사용 (기본 타이트 → 상황에 따라 전환)")
     else:
-        strategy_type = "tight"
-        ai = RuleBasedAI(name=ai_name, position=Position.BB, strategy_type=strategy_type)
+        ai = RuleBasedAI(name=ai_name, position=Position.BB, strategy_type="tight")
         print("\n[AI 설정] 2단계 타이트 AI 사용")
 
+    # AI 컨트롤러 등록
     ai_controllers: Dict[str, object] = {ai_name: ai}
-
-    # 게임에 AI 컨트롤러 연결
     attach_ai_controller(game, ai_controllers)
 
     print("\n사람 vs AI 게임을 시작합니다!")
-    print("사람 플레이어 이름:", human_name)
-    print("AI 플레이어 이름:", ai_name)
+    print("사람 플레이어:", human_name)
+    print("AI 플레이어:", ai_name)
     print("=" * 60)
 
-    # 한 핸드씩 계속 진행
+    # ── 실제 플레이 (1번이랑 똑같이 play_full_hand 사용) ──
     try:
         while True:
+            print("\n===== 새로운 핸드를 시작합니다 =====")
             game.play_full_hand()
 
-            again = input("\n다음 핸드를 계속 진행할까요? (y/n): ").strip().lower()
+            again = input("\n다음 핸드를 진행할까요? (y/n): ").strip().lower()
             if again != "y":
                 break
 
-        print("\n사람 vs AI 모드를 종료합니다.")
-
     except KeyboardInterrupt:
-        print("\n\n게임이 중단되었습니다.")
+        print("\n게임이 중단되었습니다.")
     except Exception as e:
         print(f"\n오류가 발생했습니다: {e}")
         import traceback
         traceback.print_exc()
+
+    print("\n사람 vs AI 게임을 종료합니다.")
 
 def main():
     """메인 함수 - 모드 선택"""

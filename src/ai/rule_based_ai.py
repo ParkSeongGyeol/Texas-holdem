@@ -34,14 +34,27 @@ class RuleBasedAI(AIPlayer):
 class AdaptiveRuleBasedAI(RuleBasedAI):
     # ... (상대 스타일 분석/스위칭 로직은 그대로) ...
 
-    def __init__(self, name: str, position: Position, base_mode: str = "tight"):
+    def __init__(self, name: str, position: Position, base_mode="tight"):
         self.tight_strategy = TightStrategy()
         self.loose_strategy = LooseStrategy()
 
-        # 초기 전략 선택
         if base_mode == "loose":
             strategy = self.loose_strategy
             self.current_mode = "loose"
         else:
             strategy = self.tight_strategy
             self.current_mode = "tight"
+
+        super().__init__(name, position, strategy)
+
+    def act(self, community_cards, pot, current_bet, opponents):
+
+        # 👇 적응형 전략 스위칭
+        self.choose_strategy()
+
+        return super().make_decision(
+            community_cards,
+            pot,
+            current_bet,
+            opponents,
+        )

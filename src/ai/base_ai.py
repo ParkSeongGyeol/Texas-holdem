@@ -29,7 +29,12 @@ class AIPlayer(ABC):
 
         self.hole_cards: List[Card] = []
 
-        self.opponent_patterns = {}
+        self.opponent_stats = {
+            "vpip": 0,       # voluntarily put money in pot
+            "pfr": 0,        # preflop raiser
+            "aggression": 0, # postflop bet/raise
+            "hands": 0
+        }
 
     def card_to_code(self, card: Card) -> str:
         r = card.rank.symbol
@@ -42,19 +47,13 @@ class AIPlayer(ABC):
 
   
     def hand_strength(self, hole_cards: List[Card], board_cards: List[Card]) -> float:
-        """
-        문자열 기반 evaluator / Card 기반 evaluator 양쪽에 대응 가능
-        지금은 Card evaluator 점수 정규화 사용
-        """
 
         try:
             seven = hole_cards + board_cards  # List[Card]
-
             rank, kickers, _ = HandEvaluator.evaluate_hand(seven)
 
             # Rank normalization (1~10 → 0~1)
             rank_score = (rank.value - 1) / 9
-
             kicker_score = 0.0
             if kickers:
                 kicker_score = sum(k / 14 for k in kickers) / len(kickers)
@@ -64,7 +63,56 @@ class AIPlayer(ABC):
 
         except:
             return 0.0
+        
+    def update_opponent_stats(self, opponents_actions):
+        s = self.opponent_stats
+        s["hands"] += 1
 
+        if opponents_actions.get("preflop_called"): 
+            s["vpip"] += 1
+
+        if opponents_actions.get("preflop_raised"):
+            s["pfr"] += 1
+            s["vpip"] += 1
+
+        if opponents_actions.get("postflop_aggressive"):
+            s["aggression"] += 1
+
+    # -----------------------
+    # ✔ 적응형: 상대 스타일 분석
+    # -----------------------
+    def classify_opponent(self):
+        s = self.opponent_stats
+        if s["hands"] < 8:
+            return "unknown"
+
+        vpip_rate = s["vpip"] / s["hands"]
+        pfr_rate = s["pfr"] / s["hands"]
+
+        if vpip_rate < 0.20:
+            return "tight"
+        elif vpip_rate > 0.40:
+            return "loose"
+        else:
+            return "neutral"
+
+    # -----------------------
+    # ✔ 적응형: 전략 스위칭
+    # -----------------------
+    def choose_strategy(self):
+        style = self.classify_opponent()
+
+        if style == "tight":
+            self.strategy = self.loose_strategy
+            self.current_mode = "loose"
+
+        elif style == "loose":
+            self.strategy = self.tight_strategy
+            self.current_mode = "tight"
+
+        else:
+            # 기본 유지
+            self.current_mode = self.current_mode
 
     def make_decision(
         self,
