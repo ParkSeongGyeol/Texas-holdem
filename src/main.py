@@ -2,23 +2,20 @@
 Texas Hold'em Poker Game - Main Entry Point
 2025년 2학기 알고리즘 프로젝트
 팀원: 문현준, 박성결, 박종호, 박우현
-
-Week 3-7 구현 내용 (박성결):
-- Week 3: 게임 상태 관리 (FSM), 턴 진행 시스템
-- Week 4: Player 클래스 구조, 핸드 관리
-- Week 5: 팟 구조, 베팅/레이즈/폴드 로직
-- Week 6: 베팅 액션 처리, 사이드 팟, 올인 상황
-- Week 7: 승자 결정, 게임 플로우 테스트, 디버그 기능
 """
+
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from typing import Dict
 from types import MethodType
-from src.core.game import PokerGame, Action as GameAction   # ★ Action 같이 import
-from src.core.player import Player                          # === AI 추가 ===
-from src.ai.base_ai import Action as AIAction, Position     # === AI 추가 ===
-from src.ai.rule_based_ai import RuleBasedAI                # === AI 추가 ===
+from src.core.game import PokerGame, Action as GameAction
+from src.core.player import Player
+from src.ai.base_ai import Action as AIAction, Position
+from src.ai.rule_based_ai import RuleBasedAI
 
-try:  # 구현 안돼 있으면 그냥 무시되게
+try:
     from src.ai.rule_based_ai import AdaptiveRuleBasedAI
 except ImportError:
     AdaptiveRuleBasedAI = None
@@ -31,57 +28,23 @@ AI_TO_GAME_ACTION = {
     AIAction.ALL_IN: GameAction.ALL_IN,
 }
 
-
-def demo_game():
-    """데모 게임 실행 (테스트용)"""
-    print("\n=== 데모 게임 시작 ===")
-    print("이 게임은 박성결이 구현한 Week 3-7 기능을 보여줍니다.\n")
-
-    # 게임 생성
-    game = PokerGame(small_blind=10, big_blind=20)
-
-    # 플레이어 추가
-    game.add_player("Alice", 1000)
-    game.add_player("Bob", 1000)
-    game.add_player("Charlie", 500)
-
-    print("플레이어가 추가되었습니다:")
-    for player in game.players:
-        print(f"  - {player.name}: {player.chips} chips")
-
-    print("\n게임을 시작하려면 play_full_hand()를 호출하세요.")
-    print("예: game.play_full_hand()\n")
-
-    return game
-
-
-def interactive_mode():
-    """인터랙티브 모드 (실제 플레이 가능)"""
+def start_multiplayer_game():
+    """멀티플레이어 게임 모드 (2-4인)"""
     print("\n" + "=" * 60)
-    print("텍사스 홀덤 포커 게임 - 인터랙티브 모드")
-    print("=" * 60)
-    print("\nWeek 3-7 구현 기능 (박성결):")
-    print("  ✓ 게임 상태 관리 (FSM)")
-    print("  ✓ 턴 관리 시스템")
-    print("  ✓ 플레이어 클래스 및 핸드 관리")
-    print("  ✓ 팟 구조 및 베팅 로직")
-    print("  ✓ 베팅 액션 처리 (Fold/Check/Call/Raise/All-in)")
-    print("  ✓ 사이드 팟 계산")
-    print("  ✓ 승자 결정 및 팟 분배")
-    print("  ✓ 디버그 기능 및 액션 히스토리")
+    print("🃏 멀티플레이어 게임 (최대 4인)")
     print("=" * 60)
 
-    # 게임 설정
-    print("\n게임 설정:")
-    try:
-        num_players = int(input("플레이어 수를 입력하세요 (2-10): "))
-        if num_players < 2 or num_players > 10:
-            print("2-10명의 플레이어가 필요합니다. 기본값 3명으로 설정합니다.")
-            num_players = 3
-    except ValueError:
-        print("올바른 숫자를 입력하지 않았습니다. 기본값 3명으로 설정합니다.")
-        num_players = 3
+    # 플레이어 수 설정
+    while True:
+        try:
+            num_players = int(input("플레이어 수를 입력하세요 (2-4): "))
+            if 2 <= num_players <= 4:
+                break
+            print("2명에서 4명 사이여야 합니다.")
+        except ValueError:
+            print("올바른 숫자를 입력하세요.")
 
+    # 칩 설정
     try:
         starting_chips = int(input("시작 칩 수를 입력하세요 (기본값: 1000): ") or "1000")
     except ValueError:
@@ -91,42 +54,29 @@ def interactive_mode():
     game = PokerGame(small_blind=10, big_blind=20)
 
     # 플레이어 추가
-    player_names = ["Alice", "Bob", "Charlie", "David", "Eve", "Frank", "Grace", "Henry", "Ivy", "Jack"]
     for i in range(num_players):
-        game.add_player(player_names[i], starting_chips)
+        name = input(f"플레이어 {i+1}의 이름을 입력하세요: ").strip() or f"Player {i+1}"
+        game.add_player(name, starting_chips)
 
-    print(f"\n{num_players}명의 플레이어가 추가되었습니다.")
-
-    # 디버그 모드 설정
-    debug = input("디버그 모드를 활성화하시겠습니까? (y/n): ").lower() == 'y'
-    if debug:
-        game.enable_debug_mode()
-
+    print(f"\n{num_players}명의 플레이어가 참가했습니다.")
     print("\n게임을 시작합니다!")
-    print("\n액션 선택:")
-    print("  - fold: 폴드 (패 포기)")
-    print("  - check: 체크 (베팅 없이 패스)")
-    print("  - call: 콜 (현재 베팅에 맞춤)")
-    print("  - raise: 레이즈 (베팅 증가)")
-    print("  - allin: 올인 (모든 칩 베팅)")
-    print("\n" + "=" * 60)
-
+    
     # 게임 진행
     try:
-        game.play_full_hand()
-
-        # 게임 통계 출력
-        print("\n" + "=" * 60)
-        print("게임 통계:")
-        stats = game.get_game_statistics()
-        for key, value in stats.items():
-            print(f"  {key}: {value}")
-
-        # 액션 히스토리 출력 여부
-        show_history = input("\n액션 히스토리를 보시겠습니까? (y/n): ").lower() == 'y'
-        if show_history:
-            game.print_action_history()
-
+        while True:
+            game.play_full_hand()
+            
+            # 파산한 플레이어 체크 (간단한 로직)
+            active_count = sum(1 for p in game.players if p.chips > 0)
+            if active_count < 2:
+                print("\n게임 종료! 플레이어가 부족합니다.")
+                break
+            
+            # 계속 진행 여부
+            again = input("\n다음 핸드를 진행할까요? (y/n): ").strip().lower()
+            if again != 'y':
+                break
+                
     except KeyboardInterrupt:
         print("\n\n게임이 중단되었습니다.")
     except Exception as e:
@@ -134,172 +84,88 @@ def interactive_mode():
         import traceback
         traceback.print_exc()
 
-
-def test_mode():
-    """테스트 모드 - 자동화된 기능 검증"""
-    print("\n" + "=" * 60)
-    print("테스트 모드 - Week 3-7 기능 검증")
-    print("=" * 60)
-
-    print("\n[테스트 1] 게임 초기화 및 플레이어 추가")
-    game = PokerGame(small_blind=5, big_blind=10)
-    game.add_player("Alice", 1000)
-    game.add_player("Bob", 1000)
-    print(f"  ✓ 플레이어 수: {len(game.players)}")
-    print(f"  ✓ 스몰 블라인드: {game.small_blind}")
-    print(f"  ✓ 빅 블라인드: {game.big_blind}")
-
-    print("\n[테스트 2] 핸드 시작 및 카드 딜링")
-    game.new_hand()
-    print(f"  ✓ 게임 단계: {game.current_phase.value}")
-    print(f"  ✓ Alice의 핸드: {game.players[0].has_full_hand()}")
-    print(f"  ✓ Bob의 핸드: {game.players[1].has_full_hand()}")
-
-    print("\n[테스트 3] 블라인드 베팅")
-    game.post_blinds()
-    print(f"  ✓ 팟: {game.pot}")
-    print(f"  ✓ 현재 베팅: {game.current_bet}")
-
-    print("\n[테스트 4] 게임 단계 전이")
-    game.deal_flop()
-    print(f"  ✓ FLOP: {game.current_phase.value}")
-    print(f"  ✓ 커뮤니티 카드 수: {len(game.community_cards)}")
-
-    game.deal_turn()
-    print(f"  ✓ TURN: {game.current_phase.value}")
-    print(f"  ✓ 커뮤니티 카드 수: {len(game.community_cards)}")
-
-    game.deal_river()
-    print(f"  ✓ RIVER: {game.current_phase.value}")
-    print(f"  ✓ 커뮤니티 카드 수: {len(game.community_cards)}")
-
-    print("\n[테스트 5] 액션 로깅")
-    game.log_action("테스트 액션 1")
-    game.log_action("테스트 액션 2")
-    print(f"  ✓ 액션 히스토리 크기: {len(game.action_history)}")
-
-    print("\n[테스트 6] 게임 통계")
-    stats = game.get_game_statistics()
-    print("  ✓ 게임 통계:")
-    for key, value in stats.items():
-        print(f"    - {key}: {value}")
-
-    print("\n[테스트 7] 플레이어 상태 관리")
-    player = game.players[0]
-    print(f"  ✓ 초기 상태: {player.get_state()}")
-    player.fold()
-    print(f"  ✓ 폴드 후: {player.get_state()}")
-    player.reset_for_new_hand()
-    print(f"  ✓ 리셋 후: {player.get_state()}")
-
-    print("\n" + "=" * 60)
-    print("모든 테스트가 완료되었습니다!")
-    print("=" * 60)
-
 def attach_ai_controller(game: PokerGame, ai_controllers: Dict[str, object]) -> None:
-    """game.get_player_action을 갈아끼워서, AI 이름일 때는 AI가 알아서 결정하게 만드는 래퍼"""
-
+    """AI 컨트롤러 연결 (Monkey Patching)"""
     original_get_player_action = game.get_player_action
 
     def get_player_action_with_ai(self: PokerGame, player: Player):
-        # 👉 사람이면 원래 입력 로직 그대로 사용
         if player.name not in ai_controllers:
             return original_get_player_action(player)
 
-        # 👉 여기서부터는 AI 턴
         ai = ai_controllers[player.name]
-
-        # AI에게 홀카드 전달
         ai.receive_hole_cards(player.hand)
-
-        community_cards = self.community_cards
-        pot = self.pot
-        to_call = self.current_bet - player.current_bet
-
-        # opponents는 일단 비워둬도 됨 (지금 전략에서 안씀)
-        opponents = []
-
-        # RuleBasedAI / AdaptiveRuleBasedAI 둘 다 act(...) 있음
+        
+        # AI 액션 결정
         ai_action, ai_amount = ai.act(
-            community_cards=community_cards,
-            pot=pot,
-            current_bet=to_call,
-            opponents=opponents,
+            community_cards=self.community_cards,
+            pot=self.pot,
+            current_bet=self.current_bet - player.current_bet,
+            opponents=[] # 현재 구현상 미사용
         )
 
         game_action = AI_TO_GAME_ACTION[ai_action]
-
-        # 콜인데 to_call이 0이면 → 체크로 바꿔주기
-        if game_action == GameAction.CALL and to_call == 0:
+        
+        # Call인데 낼 돈이 0이면 Check로 변환
+        if game_action == GameAction.CALL and (self.current_bet - player.current_bet) == 0:
             game_action = GameAction.CHECK
 
-        # 레이즈일 때만 금액 전달, 나머지는 0
         amount = ai_amount if game_action == GameAction.RAISE else 0
-
         print(f"[AI] {player.name}: {game_action.value}, amount={amount}")
 
         return game_action, amount
 
-    # game.get_player_action 메서드를 교체
     game.get_player_action = MethodType(get_player_action_with_ai, game)
 
-def ai_mode():
-    """
-    사람 vs AI / 적응형 AI 모드
-    - 사람 1명 + AI 1명
-    - 1번 인터랙티브 모드와 똑같이 play_full_hand()로 진행
-      (game.py는 전혀 수정 안 함)
-    """
+def start_ai_game():
+    """AI 대전 모드 (1 vs 1)"""
     print("\n" + "=" * 60)
-    print("🤖 사람 vs AI 모드")
+    print("🤖 AI 대전 모드")
     print("=" * 60)
 
-    # ── AI 종류 선택 ─────────────────────────────
-    print("AI 종류를 선택하세요:")
-    print("  1. 루즈 AI")
-    print("  2. 타이트 AI")
-    if AdaptiveRuleBasedAI is not None:
-        print("  3. 적응형 AI")
-    choice = input("선택 (1-3, 기본: 2): ").strip() or "2"
+    print("AI 난이도를 선택하세요:")
+    print("  1. 루즈 (Loose) - 공격적, 블러핑 많음")
+    print("  2. 타이트 (Tight) - 보수적, 강한 패 위주")
+    if AdaptiveRuleBasedAI:
+        print("  3. 적응형 (Adaptive) - 플레이어 스타일 분석")
+    
+    choice = input("선택 (기본: 2): ").strip() or "2"
 
-    # ── 게임 생성 ───────────────────────────────
     game = PokerGame(small_blind=10, big_blind=20)
+    
+    human_name = input("당신의 이름을 입력하세요: ").strip() or "Player"
+    ai_name = "AlphaGo"
 
-    human_name = "Player"
-    ai_name = "AI_1"
-
-    # 사람 + AI 플레이어 추가
     game.add_player(human_name, 1000)
     game.add_player(ai_name, 1000)
 
-    # ── AI 인스턴스 생성 ─────────────────────────
+    # AI 생성
     if choice == "1":
         ai = RuleBasedAI(name=ai_name, position=Position.BB, strategy_type="loose")
-        print("\n[AI 설정] 1단계 루즈 AI 사용")
-    elif choice == "3" and AdaptiveRuleBasedAI is not None:
+        print(f"\n[설정] {ai_name}(Loose)와 대결합니다.")
+    elif choice == "3" and AdaptiveRuleBasedAI:
         ai = AdaptiveRuleBasedAI(name=ai_name, position=Position.BB, base_mode="tight")
-        print("\n[AI 설정] 3단계 적응형 AI 사용 (기본 타이트 → 상황에 따라 전환)")
+        print(f"\n[설정] {ai_name}(Adaptive)와 대결합니다.")
     else:
         ai = RuleBasedAI(name=ai_name, position=Position.BB, strategy_type="tight")
-        print("\n[AI 설정] 2단계 타이트 AI 사용")
+        print(f"\n[설정] {ai_name}(Tight)와 대결합니다.")
 
-    # AI 컨트롤러 등록
-    ai_controllers: Dict[str, object] = {ai_name: ai}
-    attach_ai_controller(game, ai_controllers)
+    attach_ai_controller(game, {ai_name: ai})
 
-    print("\n사람 vs AI 게임을 시작합니다!")
-    print("사람 플레이어:", human_name)
-    print("AI 플레이어:", ai_name)
-    print("=" * 60)
-
-    # ── 실제 플레이 (1번이랑 똑같이 play_full_hand 사용) ──
+    print("\n게임을 시작합니다!")
+    
     try:
         while True:
-            print("\n===== 새로운 핸드를 시작합니다 =====")
             game.play_full_hand()
+            
+            if game.players[0].chips <= 0:
+                print("\n패배했습니다! 칩이 모두 소진되었습니다.")
+                break
+            if game.players[1].chips <= 0:
+                print("\n승리했습니다! AI의 칩이 모두 소진되었습니다.")
+                break
 
             again = input("\n다음 핸드를 진행할까요? (y/n): ").strip().lower()
-            if again != "y":
+            if again != 'y':
                 break
 
     except KeyboardInterrupt:
@@ -309,49 +175,28 @@ def ai_mode():
         import traceback
         traceback.print_exc()
 
-    print("\n사람 vs AI 게임을 종료합니다.")
-
 def main():
-    """메인 함수 - 모드 선택"""
     print("\n" + "=" * 60)
     print("🎰 텍사스 홀덤 포커 게임 🎰")
     print("=" * 60)
-    print("2025년 2학기 알고리즘 프로젝트")
-    print("팀원: 문현준, 박성결, 박종호, 박우현")
-    print("=" * 60)
 
-    print("\n모드 선택:")
-    print("  1. 인터랙티브 모드 (실제 게임 플레이)")
-    print("  2. 테스트 모드 (자동화된 기능 검증)")
-    print("  3. 데모 모드 (게임 객체 생성만)")
-    print("  4. 사람 vs AI 모드")
-    print("  5. 종료")
+    while True:
+        print("\n메뉴 선택:")
+        print("  1. 멀티플레이어 게임 (2-4인)")
+        print("  2. AI와 대전 (1 vs 1)")
+        print("  3. 종료")
 
-    try:
-        choice = input("\n선택 (1-5): ").strip()
+        choice = input("\n선택 > ").strip()
 
         if choice == "1":
-            interactive_mode()
+            start_multiplayer_game()
         elif choice == "2":
-            test_mode()
+            start_ai_game()
         elif choice == "3":
-            demo_game()
-            print("\n데모 게임이 생성되었습니다.")
-        elif choice == "4":
-            ai_mode()
-        elif choice == "5":
-            print("\n게임을 종료합니다. 안녕히 가세요!")
+            print("\n게임을 종료합니다.")
+            break
         else:
-            print("\n올바른 선택이 아닙니다.")
-            main()
-
-    except KeyboardInterrupt:
-        print("\n\n프로그램이 종료되었습니다.")
-    except Exception as e:
-        print(f"\n오류가 발생했습니다: {e}")
-        import traceback
-        traceback.print_exc()
-
+            print("올바른 번호를 입력해주세요.")
 
 if __name__ == "__main__":
     main()
