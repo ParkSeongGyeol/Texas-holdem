@@ -32,7 +32,9 @@
 - **🎯 완전한 포커 게임**: 프리플롭부터 리버까지 모든 라운드
 - **🤖 2단계 AI 시스템**: 규칙 기반 타이트/루즈 AI
 - **💰 완벽한 베팅 시스템**: Check, Call, Raise, Fold, All-in
-- **👥 2인 온라인 대전**: WebSocket 기반 실시간 대전 (계획)
+- **👥 2인 온라인 대전**: WebSocket 기반 실시간 대전 (구현 완료)
+- **🌐 웹 인터페이스**: FastAPI 및 WebSocket을 활용한 반응형 웹 게임 환경
+- **📊 시뮬레이션 도구**: 몬테카를로 승률 계산기 및 미니맥스 알고리즘 (실험적)
 
 ### AI 난이도별 특징
 
@@ -50,18 +52,19 @@
 - 팟 오즈와 포지션을 적극 활용
 - 예측이 더 어려운 패턴
 
-#### Level 3: 적응형 AI (계획)
+#### Level 3: 적응형 AI (Adaptive Strategy)
 
-- 상대 스타일 분석
+- 상대 스타일 분석 (Tight/Loose)
 - 동적 전략 변경
-- 몬테카를로 시뮬레이션
-- 미니맥스 의사결정
+- 몬테카를로 시뮬레이션 기반 승률 계산
+- 미니맥스 알고리즘 (실험적 구현, 통합 예정)
 
 ### 추가 기능 (계획)
 
 - **토너먼트 모드**: 여러 AI가 경쟁하는 라운드 로빈 방식
 - **통계 분석**: 승률, 수익률, 핸드별 성과 분석
 - **디버그 모드**: 카드 공개, AI 사고 과정 표시
+- **웹 게임 모드**: 브라우저를 통한 그래픽 인터페이스 제공
 
 ## 🔧 실행 방법
 
@@ -78,8 +81,15 @@ source venv/bin/activate  # Linux/Mac
 # 의존성 설치 (개발용)
 pip install -e .[dev]
 
-# 게임 실행
+# 게임 실행 (콘솔 모드)
 python src/main.py
+
+# 웹 서버 실행 (웹 모드)
+python src/web/app.py
+# 브라우저에서 http://localhost:8000 접속
+
+# 시뮬레이션 실행
+python src/algorithms/monte_carlo.py
 
 # 테스트 실행
 pytest tests/
@@ -87,6 +97,7 @@ pytest tests/
 # 코드 스타일 검사
 black src/
 flake8 src/
+```
 
 ## 🏗️ 코드 구조 및 흐름 (Code Structure & Flow)
 
@@ -95,32 +106,31 @@ flake8 src/
 ### 프로젝트 구조도 (Project Architecture)
 
 프로젝트의 전체적인 구조와 데이터 흐름을 보여주는 아키텍처 다이어그램입니다.
-```
 
 ```mermaid
 graph TD
-    User[User / Client] --> Main[Main Entry (main.py)]
+    User["User / Client"] --> Main["Main Entry (main.py)"]
     
     subgraph "Core System"
-        Main --> Game[PokerGame]
-        Game --> Player[Player]
-        Game --> Deck[Deck]
-        Player --> Card[Card]
+        Main --> Game["PokerGame"]
+        Game --> Player["Player"]
+        Game --> Deck["Deck"]
+        Player --> Card["Card"]
     end
     
     subgraph "Algorithms"
-        Player --> HandEval[Hand Evaluator]
-        AI --> MonteCarlo[Monte Carlo Sim]
-        AI --> Minimax[Minimax]
+        Player --> HandEval["Hand Evaluator"]
+        AI --> MonteCarlo["Monte Carlo Sim"]
+        AI --> Minimax["Minimax"]
     end
     
     subgraph "AI System"
-        Player <|-- AI[AI Player]
-        AI --> Strategy[Betting Strategies]
+        Player <|-- AI["AI Player"]
+        AI --> Strategy["Betting Strategies"]
     end
     
-    subgraph "Web Interface (Planned)"
-        User --> API[FastAPI Server]
+    subgraph "Web Interface (Implemented)"
+        User --> API["FastAPI Server"]
         API --> Game
     end
 ```
@@ -167,8 +177,9 @@ graph TD
 ## 🛠️ 기술 스택
 
 - **Python 3.9+** - 메인 개발 언어
-- **FastAPI** - 웹 서버 프레임워크 (계획)
-- **WebSocket** - 실시간 통신 (계획)
+- **FastAPI** - 웹 서버 프레임워크
+- **WebSocket** - 실시간 통신
+- **Jinja2** - 웹 템플릿 엔진
 - **NumPy** - 수치 연산
 
 ## 🗂️ 프로젝트 구조
@@ -193,8 +204,11 @@ graph TD
 │   │   ├── hand_evaluator.py # 족보 판정 (문현준)
 │   │   ├── monte_carlo.py    # 몬테카를로 (박우현)
 │   │   └── minimax.py        # 미니맥스 (박우현)
-│   └── web/                 # 웹 인터페이스 (계획)
-│       └── __init__.py
+│   └── web/                 # 웹 인터페이스
+│       ├── __init__.py
+│       ├── app.py           # FastAPI 서버
+│       ├── game_adapter.py  # 웹 게임 어댑터
+│       └── index.html       # 프론트엔드 UI
 ├── tests/                   # 테스트 모듈
 │   ├── __init__.py
 │   ├── test_core.py         # 코어 모듈 테스트
@@ -236,10 +250,10 @@ graph TD
 
 ### 🌐 박우현 - 고급 AI & 시스템 통합
 
-- 몬테카를로 시뮬레이션
-- 미니맥스 알고리즘
+- 몬테카를로 시뮬레이션 (구현 완료)
+- 미니맥스 알고리즘 (구현 완료, 최적화 중)
 - 기댓값 계산 시스템
-- 네트워크 통신 구현 (FastAPI, WebSocket)
+- 네트워크 통신 구현 (FastAPI, WebSocket) (구현 완료)
 - 시스템 통합 및 최적화
 - 배포 및 Docker 설정
 
