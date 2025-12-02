@@ -125,7 +125,7 @@ graph TD
     end
     
     subgraph "AI System"
-        Player <|-- AI["AI Player"]
+        Player <-- AI["AI Player"]
         AI --> Strategy["Betting Strategies"]
     end
     
