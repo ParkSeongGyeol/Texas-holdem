@@ -25,7 +25,7 @@ def get_card_count_by_phase(phase_name: str) -> int:
     if phase_name == "Flop": return 3
     elif phase_name == "Turn": return 4
     elif phase_name == "River": return 5
-    else: raise ValueError("Phase must be 'Flop', 'Turn', or 'River'")
+    else: raise ValueError("Phase는 'Flop', 'Turn', 'River' 중 하나여야 합니다.")
 
 def generate_scenario_with_condition(
     target_phase: str, 
@@ -58,7 +58,7 @@ def generate_scenario_with_condition(
             # 찾았다!
             return hero_cards, community_cards, current_rank.name
             
-    raise TimeoutError(f"Failed to generate {target_rank_name} in {target_phase} phase after {max_attempts} attempts.")
+    raise TimeoutError(f"{max_attempts}회 시도 후 {target_phase} 페이즈에서 {target_rank_name} 생성 실패.")
 
 def run_targeted_analysis():
     simulator = MonteCarloSimulator(num_simulations=MC_SIMULATIONS)

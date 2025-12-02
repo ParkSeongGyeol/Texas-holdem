@@ -9,13 +9,12 @@ from src.algorithms.monte_carlo import MonteCarloSimulator
 
 class WebPokerGame(PokerGame):
     """
-    Web-adapted PokerGame that uses queues for input/output 
-    instead of console print/input.
+    콘솔 입출력 대신 큐를 사용하는 웹 전용 PokerGame 클래스
     """
     def __init__(self, broadcast_callback, small_blind: int = 10, big_blind: int = 20):
         super().__init__(small_blind, big_blind)
-        self.broadcast_callback = broadcast_callback  # Async function to send updates
-        self.input_queues: Dict[str, queue.Queue] = {} # player_name -> Queue
+        self.broadcast_callback = broadcast_callback  # 업데이트 전송을 위한 비동기 함수
+        self.input_queues: Dict[str, queue.Queue] = {} # 플레이어 이름 -> 큐
         self.game_running = False
         self.monte_carlo = MonteCarloSimulator(num_simulations=1000)
 
@@ -24,27 +23,27 @@ class WebPokerGame(PokerGame):
         self.input_queues[name] = queue.Queue()
 
     def log_action(self, message: str) -> None:
-        """Override log_action to broadcast to web clients"""
+        """웹 클라이언트로 브로드캐스트하기 위해 log_action 오버라이드"""
         super().log_action(message)
-        # We need to run the async callback from this synchronous method
-        # This assumes log_action is called from the game thread
+        # 동기 메서드에서 비동기 콜백을 실행해야 함
+        # log_action이 게임 스레드에서 호출된다고 가정
         self._broadcast_sync({"type": "action_log", "message": message})
 
     def display_game_state(self) -> None:
-        """Override display_game_state to broadcast full state"""
-        # Calculate win rates for all active players
+        """전체 상태를 브로드캐스트하기 위해 display_game_state 오버라이드"""
+        # 모든 활성 플레이어의 승률 계산
         win_rates = {}
         active_players = self.get_active_players()
         
-        # Only calculate if game is in progress and not showdown
+        # 게임 진행 중이고 쇼다운이 아닐 때만 계산
         if self.current_phase != GamePhase.SHOWDOWN and len(active_players) > 1:
-            # Note: This might be slow if done synchronously. 
-            # For better performance, we could run this in parallel or use a smaller simulation count.
-            # Here we use the parallel_simulation method from MonteCarloSimulator
+            # 참고: 동기적으로 수행하면 느릴 수 있음.
+            # 성능을 위해 병렬로 실행하거나 시뮬레이션 횟수를 줄일 수 있음.
+            # 여기서는 MonteCarloSimulator의 parallel_simulation 메서드 사용
             
             community_cards = self.community_cards
             for player in active_players:
-                # We need to estimate opponents count (active players - self)
+                # 상대방 수 추정 (활성 플레이어 - 자신)
                 opponents_count = len(active_players) - 1
                 if opponents_count > 0:
                     win_rate = self.monte_carlo.parallel_simulation(
@@ -55,7 +54,7 @@ class WebPokerGame(PokerGame):
                     )
                     win_rates[player.name] = round(win_rate * 100, 1)
 
-        # Construct state object
+        # 상태 객체 생성
         state = {
             "type": "update_state",
             "pot": self.pot,
@@ -72,7 +71,7 @@ class WebPokerGame(PokerGame):
                 "is_active": player.is_active,
                 "has_folded": player.has_folded,
                 "is_all_in": player.is_all_in,
-                "hand": [self._serialize_card(c) for c in player.hand], # Always send hand, frontend decides visibility
+                "hand": [self._serialize_card(c) for c in player.hand], # 항상 핸드 전송, 프론트엔드에서 가시성 결정
                 "win_rate": win_rates.get(player.name, 0)
             }
             state["players"].append(p_data)
@@ -80,9 +79,9 @@ class WebPokerGame(PokerGame):
         self._broadcast_sync(state)
 
     def get_player_action(self, player: Player) -> Tuple[Action, int]:
-        """Override get_player_action to wait for web input"""
+        """웹 입력을 기다리기 위해 get_player_action 오버라이드"""
         
-        # 1. Notify frontend that it's this player's turn
+        # 1. 프론트엔드에 해당 플레이어의 턴임을 알림
         self._broadcast_sync({
             "type": "turn_change",
             "current_player": player.name,
@@ -91,25 +90,25 @@ class WebPokerGame(PokerGame):
             "min_raise": self.min_raise
         })
 
-        # 2. Wait for input from queue
-        # If it's an AI player, we would call AI logic here.
-        # For now, we assume all players added via add_player are human or handled via queue.
-        # If we integrate AI, we check isinstance(player, AIPlayer)
+        # 2. 큐에서 입력 대기
+        # AI 플레이어라면 여기서 AI 로직 호출.
+        # 현재는 add_player로 추가된 모든 플레이어가 사람이거나 큐를 통해 처리된다고 가정.
+        # AI 통합 시 isinstance(player, AIPlayer) 확인
         
-        # Check if AI (Duck typing or name convention for now, or better: use AIPlayer class check)
-        # Since we haven't imported AIPlayer here to avoid circular imports if not careful, 
-        # let's assume if no queue exists, it might be AI? Or we explicitly handle AI in app.py
+        # AI 확인 (현재는 덕 타이핑이나 이름 규칙 사용, 또는 AIPlayer 클래스 확인)
+        # 순환 참조 방지를 위해 여기서 AIPlayer를 임포트하지 않았으므로,
+        # 큐가 없으면 AI라고 가정하거나 app.py에서 명시적으로 AI 처리
         
         if player.name not in self.input_queues:
-             # Fallback or Error
+             # 폴백 또는 에러
              print(f"No input queue for {player.name}")
              return (Action.FOLD, 0)
 
         q = self.input_queues[player.name]
         try:
-            # Wait indefinitely for action
+            # 액션 무한 대기
             action_data = q.get() 
-            # action_data should be {"action": "FOLD", "amount": 0}
+            # action_data는 {"action": "FOLD", "amount": 0} 형태여야 함
             
             action_str = action_data.get("action")
             amount = int(action_data.get("amount", 0))
@@ -119,7 +118,7 @@ class WebPokerGame(PokerGame):
             elif action_str == "CHECK":
                 return (Action.CHECK, 0)
             elif action_str == "CALL":
-                # Calculate call amount
+                # 콜 금액 계산
                 call_amount = self.current_bet - player.current_bet
                 return (Action.CALL, call_amount)
             elif action_str == "RAISE":
@@ -127,7 +126,7 @@ class WebPokerGame(PokerGame):
             elif action_str == "ALL_IN":
                 return (Action.ALL_IN, player.chips)
             else:
-                # Default fallback
+                # 기본 폴백
                 return (Action.FOLD, 0)
                 
         except Exception as e:
@@ -135,21 +134,21 @@ class WebPokerGame(PokerGame):
             return (Action.FOLD, 0)
 
     def _broadcast_sync(self, message: dict):
-        """Helper to run async broadcast from sync context"""
+        """동기 컨텍스트에서 비동기 브로드캐스트를 실행하기 위한 헬퍼"""
         try:
             loop = asyncio.get_event_loop()
         except RuntimeError:
-            # If no loop in current thread, we might need to pass the main loop
-            # But usually this runs in a thread where there is no loop.
-            # We need the loop where the websocket server is running.
+            # 현재 스레드에 루프가 없으면 메인 루프를 전달해야 할 수 있음
+            # 보통 루프가 없는 스레드에서 실행됨.
+            # 웹소켓 서버가 실행 중인 루프가 필요함.
             pass
             
-        # We need to use the loop passed from the main thread?
-        # Actually, asyncio.run_coroutine_threadsafe is the way.
-        # We need a reference to the main event loop.
+        # 메인 스레드에서 전달된 루프 사용?
+        # 사실 asyncio.run_coroutine_threadsafe가 방법임.
+        # 메인 이벤트 루프 참조 필요.
         pass 
-        # For now, we will rely on the callback being a wrapper that handles thread safety
-        # or we pass the loop to __init__
+        # 현재는 콜백이 스레드 안전을 처리하는 래퍼라고 가정
+        # 또는 __init__에 루프 전달
         
         if self.broadcast_callback:
             self.broadcast_callback(message)

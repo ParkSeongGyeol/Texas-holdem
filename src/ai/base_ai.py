@@ -30,9 +30,9 @@ class AIPlayer(ABC):
         self.hole_cards: List[Card] = []
 
         self.opponent_stats = {
-            "vpip": 0,       # voluntarily put money in pot
-            "pfr": 0,        # preflop raiser
-            "aggression": 0, # postflop bet/raise
+            "vpip": 0,       # 자발적으로 팟에 돈을 넣음 (Voluntarily Put Money In Pot)
+            "pfr": 0,        # 프리플랍 레이저 (PreFlop Raiser)
+            "aggression": 0, # 포스트플랍 베팅/레이즈
             "hands": 0
         }
 
@@ -52,7 +52,7 @@ class AIPlayer(ABC):
             seven = hole_cards + board_cards  # List[Card]
             rank, kickers, _ = HandEvaluator.evaluate_hand(seven)
 
-            # Rank normalization (1~10 → 0~1)
+            # 랭크 정규화 (1~10 → 0~1)
             rank_score = (rank.value - 1) / 9
             kicker_score = 0.0
             if kickers:

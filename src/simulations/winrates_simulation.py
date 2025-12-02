@@ -16,7 +16,7 @@ def get_game_situation(phase_card_count: int) -> Tuple[List[Card], List[Card]]:
     """
     특정 페이즈에 맞는 랜덤한 상황(내 패, 커뮤니티 카드)을 생성합니다.
     """
-    deck = Deck() # 덱 생성 및 셔플 (Provided Deck class)
+    deck = Deck() # 덱 생성 및 셔플 (제공된 Deck 클래스)
     
     # 1. 내 패 2장 드로우
     hero_cards = [deck.deal(), deck.deal()]
@@ -55,7 +55,7 @@ def run_comprehensive_analysis(
     print(f"=== 포커 승률 분석 시작 (샘플: {num_samples_per_phase}, MC회수: {mc_sims_per_hand}) ===")
 
     for phase_name, card_count in phases:
-        print(f"\n>> Analyzing [{phase_name}] Phase...")
+        print(f"\n>> [{phase_name}] 페이즈 분석 중...")
         
         for i in range(num_samples_per_phase):
             # 1. 상황 생성 (커뮤니티 카드가 무조건 존재하는 상황)
@@ -81,7 +81,7 @@ def run_comprehensive_analysis(
             
             # 진행률 표시 (로그가 너무 많지 않게 조절)
             if (i + 1) % 20 == 0:
-                print(f"   Processed {i + 1}/{num_samples_per_phase} hands...")
+                print(f"   {i + 1}/{num_samples_per_phase} 핸드 처리 완료...")
 
     return stats
 

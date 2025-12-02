@@ -1,13 +1,19 @@
 # src/ai/strategies.py
 import csv
 import os
+from typing import List, Tuple
+from random import random
+
+from src.core.card import Card
+from src.ai.base_ai import Action, AIPlayer
+
 RANKS = "23456789TJQKA"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 
 # 프리플랍 테이블 로드
-PRE_TABLE = {}   # key = (hi, lo, suited)
+PRE_TABLE = {}   # 키 = (높은카드, 낮은카드, 무늬일치여부)
 pre_path = os.path.join(DATA_DIR, "preflop_winrates.csv")
 
 with open(pre_path, "r", encoding="utf-8") as f:
@@ -46,12 +52,6 @@ with open(post_path, "r", encoding="utf-8") as f:
         win = float(row["WinRate"])
 
         POST_TABLE[(rank, phase)] = win
-
-from typing import List, Tuple
-from random import random
-
-from src.core.card import Card
-from src.ai.base_ai import Action, AIPlayer
 
 def card_to_code(card: Card) -> str:
     r = card.rank.symbol
@@ -94,7 +94,7 @@ def get_preflop_strength(hole_cards):
     if key in PRE_TABLE:
         return PRE_TABLE[key]
 
-    # CSV에 없을 경우 fallback
+    # CSV에 없을 경우 기본값 사용
     return 0.50 if suited else 0.45
 
 def pot_odds(pot: int, to_call: int):
@@ -214,7 +214,7 @@ class LooseStrategy(Strategy):
         strength = ai.hand_strength(ai.hole_cards, community_cards)
         
         rank, _, _ = ai.evaluator.evaluate_hand(ai.hole_cards + community_cards)
-        phase = stage.capitalize()    # flop → Flop, turn → Turn, river → River
+        phase = stage.capitalize()    # flop → Flop, turn → Turn, river → River (대소문자 변환)
 
         key = (rank.name, phase)
         if key in POST_TABLE:

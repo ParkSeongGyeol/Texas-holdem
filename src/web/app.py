@@ -11,7 +11,7 @@ from typing import List, Dict, Optional
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 
-# Import real game logic
+# 실제 게임 로직 임포트
 from src.core.card import Card, Deck, Rank, Suit
 from src.algorithms.hand_evaluator import HandEvaluator, HandRank
 from src.web.game_adapter import WebPokerGame
@@ -21,7 +21,7 @@ from src.ai.base_ai import Position
 app = FastAPI()
 
 # ------------------------------------------------------------------------------
-# Lobby / Connection Manager
+# 로비 / 연결 관리자
 # ------------------------------------------------------------------------------
 class ConnectionManager:
     def __init__(self):
@@ -47,7 +47,7 @@ class ConnectionManager:
 lobby_manager = ConnectionManager()
 
 # ------------------------------------------------------------------------------
-# 1. PvP Game Manager (Using WebPokerGame)
+# 1. PvP 게임 매니저 (WebPokerGame 사용)
 # ------------------------------------------------------------------------------
 class PvPGameManager:
     def __init__(self):
@@ -64,7 +64,7 @@ class PvPGameManager:
 
     def start_game(self):
         if self.game_thread and self.game_thread.is_alive():
-            return # Already running
+            return # 이미 실행 중
 
         self.game_instance = WebPokerGame(self.broadcast_callback)
         
@@ -77,22 +77,22 @@ class PvPGameManager:
         self.game_thread.start()
 
     def _run_game(self):
-        """Run the blocking game loop"""
+        """블로킹 게임 루프 실행"""
         if self.game_instance:
             self.game_instance.play_full_hand()
 
     def broadcast_callback(self, message: dict):
-        """Callback from game thread to broadcast message"""
+        """게임 스레드에서 메시지를 브로드캐스트하기 위한 콜백"""
         asyncio.run_coroutine_threadsafe(self._broadcast_async(message), self.loop)
 
     async def _broadcast_async(self, message: dict):
         for p in self.players:
             try:
-                # Transform state for frontend compatibility
+                # 프론트엔드 호환성을 위한 상태 변환
                 if message.get("type") == "update_state":
-                    # Find my player data
+                    # 내 플레이어 데이터 찾기
                     my_data = next((pl for pl in message["players"] if pl["name"] == getattr(p, "player_name", "")), None)
-                    # Find opponent data (first one that is not me)
+                    # 상대방 데이터 찾기 (내가 아닌 첫 번째 플레이어)
                     opp_data = next((pl for pl in message["players"] if pl["name"] != getattr(p, "player_name", "")), None)
                     
                     frontend_msg = {
@@ -105,7 +105,7 @@ class PvPGameManager:
                         "win_rate": my_data.get("win_rate", 0) if my_data else 0
                     }
                     
-                    # Hide opponent hand if not showdown
+                    # 쇼다운이 아니면 상대방 패 숨기기
                     if message["phase"] != "showdown" and opp_data:
                          frontend_msg["opp_hand"] = [{"hidden": True}, {"hidden": True}]
                     elif message["phase"] == "showdown" and opp_data:
@@ -113,7 +113,7 @@ class PvPGameManager:
 
                     await p.send_json(frontend_msg)
                 elif message.get("type") == "turn_change":
-                    # Add is_my_turn flag
+                    # is_my_turn 플래그 추가
                     msg = message.copy()
                     msg["is_my_turn"] = (message["current_player"] == getattr(p, "player_name", ""))
                     await p.send_json(msg)
@@ -123,7 +123,7 @@ class PvPGameManager:
                 print(f"Broadcast error: {e}")
 
     def handle_input(self, websocket: WebSocket, action_data: dict):
-        """Handle input from websocket and put into queue"""
+        """웹소켓 입력을 처리하고 큐에 넣음"""
         if not self.game_instance:
             return
             
@@ -134,7 +134,7 @@ class PvPGameManager:
 pvp_game = PvPGameManager()
 
 # ------------------------------------------------------------------------------
-# 2. AI Game Session (Using WebPokerGame)
+# 2. AI 게임 세션 (WebPokerGame 사용)
 # ------------------------------------------------------------------------------
 class AIGameSession:
     def __init__(self, player_socket: WebSocket):
@@ -150,12 +150,12 @@ class AIGameSession:
 
         self.game_instance = WebPokerGame(self.broadcast_callback)
         
-        # Add Human Player
+        # 사람 플레이어 추가
         human_name = "Human"
         self.player_socket.player_name = human_name
         self.game_instance.add_player(human_name, chips=1000)
         
-        # Add AI Player
+        # AI 플레이어 추가
         ai_player = RuleBasedAI("AI_Bot", Position.BB, strategy_type="loose")
         ai_player.chips = 1000
         self.game_instance.add_player(ai_player.name, chips=1000)
@@ -173,9 +173,9 @@ class AIGameSession:
 
     async def _broadcast_async(self, message: dict):
         try:
-            # Transform state for frontend compatibility
+            # 프론트엔드 호환성을 위한 상태 변환
             if message.get("type") == "update_state":
-                # Human is always "Human"
+                # 사람은 항상 "Human"
                 my_data = next((pl for pl in message["players"] if pl["name"] == "Human"), None)
                 opp_data = next((pl for pl in message["players"] if pl["name"] != "Human"), None)
                 
@@ -202,7 +202,7 @@ class AIGameSession:
             else:
                 await self.player_socket.send_json(message)
             
-            # Check if it's AI's turn
+            # AI의 턴인지 확인
             if message.get("type") == "turn_change" and message.get("current_player") == self.ai_player_instance.name:
                 await asyncio.get_event_loop().run_in_executor(None, self._process_ai_turn)
                 
@@ -210,15 +210,15 @@ class AIGameSession:
             print(f"Broadcast error: {e}")
 
     def _process_ai_turn(self):
-        """Calculate AI move and put into queue"""
+        """AI의 움직임을 계산하고 큐에 넣음"""
         game = self.game_instance
         ai = self.ai_player_instance
         
-        # Update AI's hand
+        # AI 핸드 업데이트
         real_ai_player = next(p for p in game.players if p.name == ai.name)
         ai.hole_cards = real_ai_player.hand
         
-        # Opponents
+        # 상대방 목록
         opponents = [p for p in game.players if p.name != ai.name]
         
         action, amount = ai.act(
@@ -231,7 +231,7 @@ class AIGameSession:
         action_str = action.value.upper()
         
         if ai.name in game.input_queues:
-            time.sleep(1.0) # Simulate thinking
+            time.sleep(1.0) # 생각하는 시간 시뮬레이션
             game.input_queues[ai.name].put({"action": action_str, "amount": amount})
 
     def handle_input(self, action_data: dict):
@@ -242,7 +242,7 @@ class AIGameSession:
             self.game_instance.input_queues[player_name].put(action_data)
 
 # ------------------------------------------------------------------------------
-# API Endpoints
+# API 엔드포인트
 # ------------------------------------------------------------------------------
 
 @app.get("/")
@@ -254,7 +254,7 @@ async def websocket_lobby(websocket: WebSocket):
     await lobby_manager.connect(websocket)
     try:
         while True:
-            await websocket.receive_text() # Keep connection alive
+            await websocket.receive_text() # 연결 유지
     except WebSocketDisconnect:
         lobby_manager.disconnect(websocket)
         await lobby_manager.broadcast_player_count()
@@ -264,7 +264,7 @@ async def websocket_pvp(websocket: WebSocket):
     await websocket.accept()
     pvp_game.add_player(websocket)
     
-    # 2 players -> Start
+    # 2명 -> 시작
     if pvp_game.is_full():
         pvp_game.start_game()
         for p in pvp_game.players:

@@ -19,7 +19,7 @@ class MonteCarloSimulator:
     ) -> float:
         """
         승률 계산 (단일 스레드)
-        Returns: 0.0 ~ 1.0 사이의 승률
+        반환값: 0.0 ~ 1.0 사이의 승률
         """
         total_score = 0.0
         
@@ -37,7 +37,7 @@ class MonteCarloSimulator:
     ) -> float:
         """
         단일 핸드 시뮬레이션
-        Returns: 1.0 (Win), 0.5 (Tie), 0.0 (Lose)
+        반환값: 1.0 (승리), 0.5 (무승부), 0.0 (패배)
         """
         
         deck = Deck()
@@ -68,7 +68,7 @@ class MonteCarloSimulator:
                 current_community.append(remaining_cards.pop()) 
 
         # 내 핸드 평가
-        # evaluate_hand 반환값: (HandRank, Kickers, BestHandCards)
+        # evaluate_hand 반환값: (족보순위, 키커, 최상패)
         my_rank, my_kickers, _ = self.evaluator.evaluate_hand(hole_cards + current_community)
         
         # 비교를 위해 (족보 값, 키커 리스트) 튜플 생성
