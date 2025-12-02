@@ -111,28 +111,38 @@ flake8 src/
 graph TD
     User["User / Client"] --> Main["Main Entry (main.py)"]
     
-    subgraph "Core System"
-        Main --> Game["PokerGame"]
+    subgraph Core["Core System"]
+        Main --> Game["Game"]
         Game --> Player["Player"]
         Game --> Deck["Deck"]
         Player --> Card["Card"]
     end
     
-    subgraph "Algorithms"
-        Player --> HandEval["Hand Evaluator"]
-        AI --> MonteCarlo["Monte Carlo Sim"]
-        AI --> Minimax["Minimax"]
+    subgraph Algo["Algorithms"]
+        HandEval["Hand Evaluator"]
+        MonteCarlo["Monte Carlo Sim"]
+        Minimax["Minimax"]
     end
     
-    subgraph "AI System"
-        Player <-- AI["AI Player"]
-        AI --> Strategy["Betting Strategies"]
+    subgraph AISys["AI System"]
+        AI["AI Player"]
+        Strategy["Betting Strategies"]
     end
     
-    subgraph "Web Interface (Implemented)"
-        User --> API["FastAPI Server"]
-        API --> Game
+    subgraph Web["Web Interface (Implemented)"]
+        API["FastAPI Server"]
     end
+
+    %% Cross-subgraph Connections
+    Player --> HandEval
+    AI --> MonteCarlo
+    AI --> Minimax
+    
+    Player -.-> AI
+    AI --> Strategy
+    
+    User --> API
+    API --> Game
 ```
 
 ### 게임 진행 흐름도 (Game Flow Diagram)
