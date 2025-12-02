@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>텍사스 홀덤 온라인</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'poker-green': '#006400',
+                        'poker-dark': '#1a1a1a',
+                        'card-bg': '#fefefe',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        #poker-table {
+            background-color: #388e3c;
+            border-radius: 50% / 30%;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5) inset;
+            border: 10px solid #212121;
+            position: relative;
+        }
+        .card {
+            width: 55px;
+            height: 80px;
+            background-color: var(--card-bg);
+            border: 1px solid #333;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+        }
+        .card-back {
+            background-color: #c00;
+            border: 2px solid gold;
+            color: transparent;
+        }
+        .player-area {
+            position: absolute;
+            width: 140px;
+            text-align: center;
+            z-index: 10;
+        }
+        .player-me { bottom: 5px; left: 50%; transform: translateX(-50%); } 
+        .player-opp { top: 15%; left: 50%; transform: translateX(-50%); }
+    </style>
+</head>
+<body class="bg-poker-dark text-white font-sans min-h-screen p-4 flex flex-col items-center justify-center">
+
+    <div class="w-full max-w-5xl flex flex-col items-center">
+
+        <!-- 1. 게임 모드 선택 (로비) -->
+        <div id="lobby-screen" class="p-8 bg-gray-800 rounded-xl shadow-2xl text-center transition-opacity duration-500 w-full max-w-xl">
+            <h1 class="text-4xl font-extrabold text-yellow-500 mb-6">텍사스 홀덤 온라인</h1>
+            
+            <div class="space-y-4">
+                <div class="bg-gray-700 p-6 rounded-lg">
+                    <h2 class="text-2xl font-bold mb-2">사람 vs 사람 (PvP)</h2>
+                    <p class="text-gray-400 mb-4">현재 접속자: <span id="player-count" class="text-green-400 font-bold">0</span>명</p>
+                    <button onclick="selectMode('pvp')" class="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold transition duration-150 shadow-lg">
+                        PvP 매칭 시작
+                    </button>
+                </div>
+
+                <div class="bg-gray-700 p-6 rounded-lg">
+                    <h2 class="text-2xl font-bold mb-2">사람 vs AI (PvE)</h2>
+                    <p class="text-gray-400 mb-4">AI와 1:1 대결을 펼칩니다.</p>
+                    <button onclick="selectMode('ai')" class="w-full px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-bold transition duration-150 shadow-lg">
+                        AI 대전 시작
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 게임 플레이 화면 -->
+        <div id="game-screen" class="hidden w-full max-w-5xl flex flex-col items-center">
+            
+            <div id="poker-table" class="w-full h-[550px] relative p-10 max-w-4xl mb-24"> 
+                <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 text-center space-y-3">
+                    <div id="game-message" class="text-lg text-white font-semibold bg-black/50 px-4 py-2 rounded">대기 중...</div>
+                </div>
+
+                <div id="community-cards" class="absolute left-1/2 transform -translate-x-1/2 flex space-x-2 z-20" style="top: 35%;"></div>
+
+                <!-- 상대방 -->
+                <div id="opponent-area" class="player-area player-opp bg-poker-dark/90 p-3 rounded-xl shadow-lg border-2 border-gray-700">
+                    <div class="text-lg font-bold">상대방</div>
+                    <div class="flex justify-center space-x-1 mt-2 mb-2" id="opp-hand"></div>
+                </div>
+
+                <!-- 나 -->
+                <div id="my-area" class="player-area player-me bg-poker-dark/90 p-3 rounded-xl shadow-lg border-2 border-gray-700">
+                    <div class="text-lg font-bold">나</div>
+                    <div class="flex justify-center space-x-1 mt-2 mb-2" id="my-hand"></div>
+                </div>
+            </div>
+            
+            <div id="action-controls" class="w-full max-w-lg mt-4 p-4 bg-poker-dark rounded-xl shadow-2xl transition-all hidden">
+                <div class="flex justify-center space-x-3">
+                    <button onclick="sendAction('FOLD')" class="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-bold">Fold</button>
+                    <button onclick="sendAction('CALL')" class="px-6 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-bold">Call / Check</button>
+                    <button onclick="sendAction('RAISE', 100)" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold">Raise 100</button>
+                </div>
+            </div>
+            
+            <div id="restart-controls" class="hidden mt-4">
+                 <button onclick="sendAction('RESTART')" class="px-8 py-3 bg-yellow-500 hover:bg-yellow-600 text-black font-bold rounded-lg">게임 재시작</button>
+            </div>
+
+            <div id="game-log" class="w-full max-w-4xl mt-4 p-3 h-32 bg-poker-dark/70 rounded-lg overflow-y-auto text-sm border border-gray-700"></div>
+        </div>
+
+    </div>
+
+    <script>
+        let ws;
+        let currentMode = '';
+
+        // --- Lobby Logic ---
+        const lobbyWs = new WebSocket(`ws://${window.location.host}/ws/lobby`);
+        lobbyWs.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'player_count') {
+                document.getElementById('player-count').textContent = data.count;
+            }
+        };
+
+        function selectMode(mode) {
+            currentMode = mode;
+            document.getElementById('lobby-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            
+            const endpoint = mode === 'pvp' ? '/ws/holdem' : '/ws/ai';
+            connectGame(endpoint);
+        }
+
+        // --- Game Logic ---
+        function connectGame(endpoint) {
+            ws = new WebSocket(`ws://${window.location.host}${endpoint}`);
+            
+            ws.onopen = () => {
+                logMessage("서버에 연결되었습니다.");
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleGameMessage(data);
+            };
+
+            ws.onclose = () => {
+                logMessage("서버와의 연결이 끊어졌습니다.", 'red');
+            };
+        }
+
+        function handleGameMessage(data) {
+            switch(data.type) {
+                case 'waiting':
+                    document.getElementById('game-message').textContent = data.message;
+                    break;
+                case 'game_start':
+                    logMessage("게임이 시작되었습니다!", 'green');
+                    document.getElementById('game-message').textContent = "게임 시작!";
+                    document.getElementById('restart-controls').classList.add('hidden');
+                    break;
+                case 'update_state':
+                    renderState(data);
+                    break;
+                case 'turn_change':
+                    updateTurn(data.is_my_turn);
+                    break;
+                case 'action_log':
+                    logMessage(data.message);
+                    break;
+                case 'game_over':
+                    logMessage(data.message, 'yellow');
+                    document.getElementById('game-message').innerHTML = `게임 종료<br>승자: ${data.winner}`;
+                    document.getElementById('action-controls').classList.add('hidden');
+                    document.getElementById('restart-controls').classList.remove('hidden');
+                    break;
+            }
+        }
+
+        function sendAction(action, amount) {
+            if (!ws) return;
+            const payload = { action: action };
+            if (amount) payload.amount = amount;
+            ws.send(JSON.stringify(payload));
+        }
+
+        function updateTurn(isMyTurn) {
+            const controls = document.getElementById('action-controls');
+            const myArea = document.getElementById('my-area');
+            const oppArea = document.getElementById('opponent-area');
+            const msg = document.getElementById('game-message');
+
+            if (isMyTurn) {
+                controls.classList.remove('hidden');
+                myArea.classList.add('border-yellow-400');
+                oppArea.classList.remove('border-yellow-400');
+                msg.textContent = "당신의 차례입니다.";
+            } else {
+                controls.classList.add('hidden');
+                myArea.classList.remove('border-yellow-400');
+                oppArea.classList.add('border-yellow-400');
+                msg.textContent = "상대방의 차례입니다.";
+            }
+        }
+
+        // --- Rendering ---
+        function renderState(data) {
+            renderCards('my-hand', data.my_hand);
+            renderCards('opp-hand', data.opp_hand);
+            renderCards('community-cards', data.community);
+        }
+
+        function renderCards(containerId, cards) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = cards.map(card => {
+                if (card.hidden) return `<div class="card card-back bg-gray-500 shadow-md"></div>`;
+                
+                const suitColor = (card.suit === 'H' || card.suit === 'D') ? 'text-red-600' : 'text-black';
+                const suitSymbol = { 'H': '♥', 'D': '♦', 'C': '♣', 'S': '♠' }[card.suit];
+                
+                return `
+                    <div class="card bg-card-bg ${suitColor} shadow-lg flex-col justify-between p-1">
+                        <span class="text-sm self-start leading-none">${card.rank}</span>
+                        <span class="text-xl">${suitSymbol}</span>
+                        <span class="text-sm self-end leading-none transform rotate-180">${card.rank}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function logMessage(msg, color='white') {
+            const log = document.getElementById('game-log');
+            const colorClass = {
+                'red': 'text-red-400',
+                'green': 'text-green-400',
+                'yellow': 'text-yellow-300',
+                'white': 'text-white'
+            }[color] || 'text-white';
+            
+            log.innerHTML += `<div class="${colorClass}">[${new Date().toLocaleTimeString()}] ${msg}</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+    </script>
+</body>
+</html>
