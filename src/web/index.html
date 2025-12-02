@@ -53,8 +53,11 @@
             text-align: center;
             z-index: 10;
         }
-        .player-me { bottom: 5px; left: 50%; transform: translateX(-50%); } 
-        .player-opp { top: 15%; left: 50%; transform: translateX(-50%); }
+        /* Dynamic Positioning Classes */
+        .pos-bottom { bottom: 5px; left: 50%; transform: translateX(-50%); } 
+        .pos-top { top: 5%; left: 50%; transform: translateX(-50%); }
+        .pos-left { top: 50%; left: 5%; transform: translateY(-50%); }
+        .pos-right { top: 50%; right: 5%; transform: translateY(-50%); }
     </style>
 </head>
 <body class="bg-poker-dark text-white font-sans min-h-screen p-4 flex flex-col items-center justify-center">
@@ -77,6 +80,16 @@
                 <div class="bg-gray-700 p-6 rounded-lg">
                     <h2 class="text-2xl font-bold mb-2">사람 vs AI (PvE)</h2>
                     <p class="text-gray-400 mb-4">AI와 1:1 대결을 펼칩니다.</p>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold mb-2 text-gray-300">AI 난이도 선택</label>
+                        <select id="ai-difficulty" class="w-full p-2 bg-gray-600 rounded border border-gray-500 text-white">
+                            <option value="loose">루즈 (Loose) - 공격적</option>
+                            <option value="tight" selected>타이트 (Tight) - 보수적</option>
+                            <option value="adaptive">적응형 (Adaptive) - 지능형</option>
+                        </select>
+                    </div>
+
                     <button onclick="selectMode('ai')" class="w-full px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-bold transition duration-150 shadow-lg">
                         AI 대전 시작
                     </button>
@@ -84,26 +97,38 @@
             </div>
         </div>
 
-        <!-- 2. 게임 플레이 화면 -->
+        <!-- 2. 대기실 (PvP Only) -->
+        <div id="waiting-screen" class="hidden p-8 bg-gray-800 rounded-xl shadow-2xl text-center w-full max-w-xl">
+            <h2 class="text-3xl font-bold text-white mb-4">대기실</h2>
+            <p class="text-xl mb-6">현재 접속 인원: <span id="room-count" class="text-green-400 font-bold">1</span> / 4</p>
+            
+            <div class="flex flex-col space-y-3">
+                <button id="btn-start-game" onclick="startGame()" disabled 
+                    class="w-full px-6 py-4 bg-gray-600 text-gray-400 rounded-lg font-bold transition duration-150 shadow-lg cursor-not-allowed">
+                    게임 시작 (최소 2명)
+                </button>
+                <p class="text-sm text-gray-500">2명 이상 접속 시 활성화됩니다.</p>
+            </div>
+        </div>
+
+        <!-- 3. 게임 플레이 화면 -->
         <div id="game-screen" class="hidden w-full max-w-5xl flex flex-col items-center">
             
             <div id="poker-table" class="w-full h-[550px] relative p-10 max-w-4xl mb-24"> 
                 <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 text-center space-y-3">
-                    <div id="game-message" class="text-lg text-white font-semibold bg-black/50 px-4 py-2 rounded">대기 중...</div>
+                    <div id="game-message" class="text-lg text-white font-semibold bg-black/50 px-4 py-2 rounded">게임 진행 중</div>
                 </div>
 
                 <div id="community-cards" class="absolute left-1/2 transform -translate-x-1/2 flex space-x-2 z-20" style="top: 35%;"></div>
 
-                <!-- 상대방 -->
-                <div id="opponent-area" class="player-area player-opp bg-poker-dark/90 p-3 rounded-xl shadow-lg border-2 border-gray-700">
-                    <div class="text-lg font-bold">상대방</div>
-                    <div class="flex justify-center space-x-1 mt-2 mb-2" id="opp-hand"></div>
-                </div>
+                <!-- 플레이어 영역들이 동적으로 추가됨 -->
+                <div id="players-container"></div>
 
-                <!-- 나 -->
-                <div id="my-area" class="player-area player-me bg-poker-dark/90 p-3 rounded-xl shadow-lg border-2 border-gray-700">
-                    <div class="text-lg font-bold">나</div>
+                <!-- 나 (항상 하단) -->
+                <div id="my-area" class="player-area pos-bottom bg-poker-dark/90 p-3 rounded-xl shadow-lg border-2 border-gray-700">
+                    <div class="text-lg font-bold">나 <span id="my-chips" class="text-yellow-400 text-sm"></span></div>
                     <div class="flex justify-center space-x-1 mt-2 mb-2" id="my-hand"></div>
+                    <div id="my-bet" class="text-sm text-blue-300"></div>
                 </div>
             </div>
             
@@ -115,11 +140,22 @@
                 </div>
             </div>
             
-            <div id="restart-controls" class="hidden mt-4">
-                 <button onclick="sendAction('RESTART')" class="px-8 py-3 bg-yellow-500 hover:bg-yellow-600 text-black font-bold rounded-lg">게임 재시작</button>
+            <div id="restart-controls" class="hidden mt-4 flex space-x-4">
+                 <button onclick="exitGame()" class="px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg">나가기</button>
             </div>
 
             <div id="game-log" class="w-full max-w-4xl mt-4 p-3 h-32 bg-poker-dark/70 rounded-lg overflow-y-auto text-sm border border-gray-700"></div>
+        </div>
+
+        <!-- Game Over Modal -->
+        <div id="game-over-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+            <div class="bg-gray-800 p-8 rounded-xl shadow-2xl text-center max-w-md w-full border-2 border-yellow-500">
+                <h2 id="modal-title" class="text-4xl font-bold text-yellow-400 mb-4">Game Over</h2>
+                <p id="modal-message" class="text-xl text-white mb-8">결과 메시지</p>
+                <button onclick="closeModal()" class="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-white transition duration-150">
+                    확인 (로비로 이동)
+                </button>
+            </div>
         </div>
 
     </div>
@@ -140,10 +176,33 @@
         function selectMode(mode) {
             currentMode = mode;
             document.getElementById('lobby-screen').classList.add('hidden');
-            document.getElementById('game-screen').classList.remove('hidden');
             
-            const endpoint = mode === 'pvp' ? '/ws/holdem' : '/ws/ai';
+            let endpoint = '';
+            if (mode === 'pvp') {
+                document.getElementById('waiting-screen').classList.remove('hidden');
+                endpoint = '/ws/holdem';
+            } else {
+                document.getElementById('game-screen').classList.remove('hidden');
+                const difficulty = document.getElementById('ai-difficulty').value;
+                endpoint = `/ws/ai?difficulty=${difficulty}`;
+            }
+            
             connectGame(endpoint);
+        }
+
+        function startGame() {
+            sendAction('GAME_START');
+        }
+
+        function exitGame() {
+            if (confirm("정말로 게임을 나가시겠습니까? (현재 핸드가 끝나면 종료됩니다)")) {
+                sendAction('EXIT');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('game-over-modal').classList.add('hidden');
+            window.location.reload(); // 로비로 리로드
         }
 
         // --- Game Logic ---
@@ -166,13 +225,29 @@
 
         function handleGameMessage(data) {
             switch(data.type) {
+                case 'room_update':
+                    updateWaitingRoom(data);
+                    break;
+                case 'error':
+                    alert(data.message);
+                    window.location.reload();
+                    break;
                 case 'waiting':
                     document.getElementById('game-message').textContent = data.message;
                     break;
                 case 'game_start':
                     logMessage("게임이 시작되었습니다!", 'green');
+                    document.getElementById('waiting-screen').classList.add('hidden');
+                    document.getElementById('game-screen').classList.remove('hidden');
                     document.getElementById('game-message').textContent = "게임 시작!";
                     document.getElementById('restart-controls').classList.add('hidden');
+                    
+                    // 게임 시작 시 나가기 버튼 표시
+                    const restartDiv = document.getElementById('restart-controls');
+                    restartDiv.innerHTML = `
+                        <button onclick="exitGame()" class="px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg">나가기 (핸드 종료 후)</button>
+                    `;
+                    restartDiv.classList.remove('hidden');
                     break;
                 case 'update_state':
                     renderState(data);
@@ -184,11 +259,27 @@
                     logMessage(data.message);
                     break;
                 case 'game_over':
-                    logMessage(data.message, 'yellow');
-                    document.getElementById('game-message').innerHTML = `게임 종료<br>승자: ${data.winner}`;
-                    document.getElementById('action-controls').classList.add('hidden');
-                    document.getElementById('restart-controls').classList.remove('hidden');
+                    // 모달 표시
+                    document.getElementById('modal-title').textContent = data.winner === 'Human' ? "승리!" : (data.winner === 'Others' ? "패배" : "게임 종료");
+                    document.getElementById('modal-message').textContent = data.message;
+                    document.getElementById('game-over-modal').classList.remove('hidden');
                     break;
+            }
+        }
+
+        function updateWaitingRoom(data) {
+            document.getElementById('room-count').textContent = data.count;
+            const btn = document.getElementById('btn-start-game');
+            if (data.can_start) {
+                btn.disabled = false;
+                btn.classList.remove('bg-gray-600', 'text-gray-400', 'cursor-not-allowed');
+                btn.classList.add('bg-green-600', 'text-white', 'hover:bg-green-700');
+                btn.textContent = "게임 시작";
+            } else {
+                btn.disabled = true;
+                btn.classList.add('bg-gray-600', 'text-gray-400', 'cursor-not-allowed');
+                btn.classList.remove('bg-green-600', 'text-white', 'hover:bg-green-700');
+                btn.textContent = "게임 시작 (최소 2명)";
             }
         }
 
@@ -202,32 +293,64 @@
         function updateTurn(isMyTurn) {
             const controls = document.getElementById('action-controls');
             const myArea = document.getElementById('my-area');
-            const oppArea = document.getElementById('opponent-area');
             const msg = document.getElementById('game-message');
 
+            // 내 영역 하이라이트
             if (isMyTurn) {
                 controls.classList.remove('hidden');
                 myArea.classList.add('border-yellow-400');
-                oppArea.classList.remove('border-yellow-400');
                 msg.textContent = "당신의 차례입니다.";
             } else {
                 controls.classList.add('hidden');
                 myArea.classList.remove('border-yellow-400');
-                oppArea.classList.add('border-yellow-400');
                 msg.textContent = "상대방의 차례입니다.";
             }
         }
 
         // --- Rendering ---
         function renderState(data) {
-            renderCards('my-hand', data.my_hand);
-            renderCards('opp-hand', data.opp_hand);
+            // 1. 커뮤니티 카드
             renderCards('community-cards', data.community);
+
+            // 2. 내 정보 업데이트
+            renderCards('my-hand', data.my_hand);
+            document.getElementById('my-chips').textContent = `(${data.my_chips})`;
+            document.getElementById('my-bet').textContent = data.my_bet > 0 ? `Bet: ${data.my_bet}` : '';
+
+            // 3. 상대방 렌더링 (동적 위치)
+            const container = document.getElementById('players-container');
+            container.innerHTML = ''; // 초기화
+
+            // 위치 매핑: 1명(Top), 2명(Left, Right), 3명(Left, Top, Right)
+            const positions = [
+                ['pos-top'], 
+                ['pos-left', 'pos-right'], 
+                ['pos-left', 'pos-top', 'pos-right']
+            ];
+            
+            const oppCount = data.opponents.length;
+            const layout = positions[oppCount - 1] || [];
+
+            data.opponents.forEach((opp, index) => {
+                const posClass = layout[index] || 'pos-top';
+                const isActive = opp.is_active ? '' : 'opacity-50';
+                const betInfo = opp.current_bet > 0 ? `<div class="text-sm text-blue-300">Bet: ${opp.current_bet}</div>` : '';
+                
+                const html = `
+                    <div class="player-area ${posClass} ${isActive} bg-poker-dark/90 p-3 rounded-xl shadow-lg border-2 border-gray-700">
+                        <div class="text-lg font-bold">${opp.name} <span class="text-yellow-400 text-sm">(${opp.chips})</span></div>
+                        <div class="flex justify-center space-x-1 mt-2 mb-2">
+                            ${renderHandHtml(opp.hand)}
+                        </div>
+                        ${betInfo}
+                    </div>
+                `;
+                container.innerHTML += html;
+            });
         }
 
-        function renderCards(containerId, cards) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = cards.map(card => {
+        function renderHandHtml(cards) {
+            return cards.map(card => {
                 if (card.hidden) return `<div class="card card-back bg-gray-500 shadow-md"></div>`;
                 
                 const suitColor = (card.suit === 'H' || card.suit === 'D') ? 'text-red-600' : 'text-black';
@@ -241,6 +364,11 @@
                     </div>
                 `;
             }).join('');
+        }
+
+        function renderCards(containerId, cards) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = renderHandHtml(cards);
         }
 
         function logMessage(msg, color='white') {

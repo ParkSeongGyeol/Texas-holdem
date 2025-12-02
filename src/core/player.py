@@ -22,6 +22,7 @@ class Player:
         is_active (bool): 게임 참여 가능 여부 (칩이 있고 폴드하지 않음)
         has_folded (bool): 현재 핸드에서 폴드 여부
         is_all_in (bool): 올인 상태 여부
+        acted_this_round (bool): 현재 베팅 라운드에서 액션을 취했는지 여부
 
     Example:
         >>> player = Player("Alice", 1000)
@@ -54,6 +55,7 @@ class Player:
         self.is_active = chips > 0
         self.has_folded = False
         self.is_all_in = False
+        self.acted_this_round = False
 
     def receive_card(self, card: Card) -> None:
         """
@@ -136,6 +138,7 @@ class Player:
         self.current_bet = 0
         self.has_folded = False
         self.is_all_in = False
+        self.acted_this_round = False
         self.is_active = self.chips > 0
 
     def can_bet(self, amount: int) -> bool:

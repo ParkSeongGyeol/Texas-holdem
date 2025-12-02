@@ -72,6 +72,7 @@ class PokerGame:
         # 디버그 모드
         self.debug_mode = False                 # 디버그 모드 활성화 여부
         self.action_history: List[str] = []     # 게임 진행 중 발생한 액션 기록
+        self.last_winners: List[Player] = []    # 마지막 핸드 승자
 
     def add_player(self, name: str, chips: int = 1000) -> None:
         """플레이어 추가"""
@@ -96,6 +97,7 @@ class PokerGame:
         self.pot = 0
         self.current_phase = GamePhase.PREFLOP
         self.current_bet = 0
+        self.last_winners = []
 
         # 플레이어 상태 리셋
         for player in self.players:
@@ -198,6 +200,9 @@ class PokerGame:
         for player in players_who_can_act:
             if player.current_bet != self.current_bet:
                 return False
+            # 추가: 이번 라운드에서 액션을 취했는지 확인 (BB 옵션 등 처리)
+            if not player.acted_this_round:
+                return False
 
         return True
 
@@ -215,6 +220,7 @@ class PokerGame:
             sb_amount = sb_player.bet(min(self.small_blind, sb_player.chips))
             self.pot += sb_amount
             self.log_action(f"{sb_player.name}가 스몰 블라인드 {sb_amount} 베팅")
+            # 블라인드 포스팅은 자발적 액션이 아니므로 acted_this_round는 False 유지 (옵션 위해)
 
         # 빅 블라인드
         bb_position = (self.dealer_position + 2) % len(self.players)
@@ -224,6 +230,7 @@ class PokerGame:
             self.pot += bb_amount
             self.current_bet = bb_amount
             self.log_action(f"{bb_player.name}가 빅 블라인드 {bb_amount} 베팅")
+            # 블라인드 포스팅은 자발적 액션이 아니므로 acted_this_round는 False 유지
 
         # 첫 액션 플레이어는 빅 블라인드 다음
         self.current_player_index = (bb_position + 1) % len(self.players)
@@ -243,11 +250,16 @@ class PokerGame:
             self.current_bet = 0
             for player in self.players:
                 player.current_bet = 0
+                player.acted_this_round = False # 초기화
             self.current_player_index = (self.dealer_position + 1) % len(self.players)
             self.last_raiser_index = -1
+        else:
+            # 프리플랍에서는 블라인드 제외하고 아직 아무도 액션 안 함
+            # (블라인드 플레이어도 옵션이 있으므로 False 상태여야 함)
+            pass
 
         rounds_without_action = 0
-        max_rounds = len(self.players) * 2  # 무한 루프 방지
+        max_rounds = len(self.players) * 4  # 무한 루프 방지 (넉넉하게)
 
         while not self.is_betting_round_complete() and rounds_without_action < max_rounds:
             player = self.players[self.current_player_index]
@@ -338,6 +350,8 @@ class PokerGame:
 
         베팅 액션 처리, 올인 상황 처리
         """
+        player.acted_this_round = True # 액션 수행 표시
+
         if action == Action.FOLD:
             player.fold()
             self.log_action(f"{player.name}가 폴드했습니다")
@@ -363,6 +377,11 @@ class PokerGame:
             self.current_bet = player.current_bet
             self.min_raise = self.current_bet - old_bet
             self.last_raiser_index = self.current_player_index
+            
+            # 레이즈 발생 시 다른 모든 플레이어의 acted_this_round 초기화 (다시 액션해야 함)
+            for p in self.players:
+                if p != player:
+                    p.acted_this_round = False
 
             self.log_action(f"{player.name}가 {actual_bet} 레이즈했습니다 (현재 베팅: {self.current_bet})")
 
@@ -377,6 +396,11 @@ class PokerGame:
                 self.current_bet = player.current_bet
                 self.min_raise = self.current_bet - old_bet
                 self.last_raiser_index = self.current_player_index
+                
+                # 레이즈(올인으로 인한 베팅 증가) 발생 시 다른 플레이어 초기화
+                for p in self.players:
+                    if p != player:
+                        p.acted_this_round = False
 
             self.log_action(f"{player.name}가 {actual_bet}으로 올인했습니다!")
 
@@ -524,6 +548,7 @@ class PokerGame:
 
         # 승자 결정
         winners = self.determine_winner()
+        self.last_winners = winners  # 승자 저장
 
         print(f"\n승자: {', '.join([w.name for w in winners])}")
 
@@ -628,6 +653,7 @@ class PokerGame:
                 self.log_action(f"\n{winner.name}가 유일한 참가자로 팟 {self.pot} 획득!")
                 winner.chips += self.pot
                 self.pot = 0
+                self.last_winners = [winner] # 조기 승리도 승자 저장
                 break
 
             self.advance_phase()

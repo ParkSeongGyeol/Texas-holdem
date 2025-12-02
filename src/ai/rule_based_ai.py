@@ -31,9 +31,7 @@ class RuleBasedAI(AIPlayer):
             opponents
         )
 
-class AdaptiveRuleBasedAI(RuleBasedAI):
-    # ... (상대 스타일 분석/스위칭 로직은 그대로) ...
-
+class AdaptiveRuleBasedAI(AIPlayer):
     def __init__(self, name: str, position: Position, base_mode="tight"):
         self.tight_strategy = TightStrategy()
         self.loose_strategy = LooseStrategy()
@@ -47,9 +45,11 @@ class AdaptiveRuleBasedAI(RuleBasedAI):
 
         super().__init__(name, position, strategy)
 
-    def act(self, community_cards, pot, current_bet, opponents):
+    def receive_hole_cards(self, cards: List[Card]):
+        self.hole_cards = cards
 
-        # 👇 적응형 전략 스위칭
+    def act(self, community_cards, pot, current_bet, opponents):
+        # 적응형 전략 스위칭
         self.choose_strategy()
 
         return super().make_decision(
